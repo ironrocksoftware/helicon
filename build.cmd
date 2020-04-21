@@ -10,11 +10,11 @@ if exist servx\bin\Release (rmdir /s /q servx\bin\Release)
 %msbuild% -m -t:Build -property:Configuration=Release servx\servx.csproj
 if errorlevel 1 goto :failed_servx
 
-if exist dist (rmdir /s /q dist)
-mkdir dist
+::if exist dist (rmdir /s /q dist)
+if not exist dit (mkdir dist)
 
-copy helicon\bin\Release\*.* dist
-copy servx\bin\Release\*.* dist
+copy /y helicon\bin\Release\*.* dist
+copy /y servx\bin\Release\*.* dist
 
 del dist\*.xml
 del dist\*.pdb

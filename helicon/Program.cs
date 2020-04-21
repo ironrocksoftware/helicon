@@ -180,7 +180,12 @@ namespace helicon
 							try {
 								value = ((List<object>)value)[i0];
 							} catch (InvalidCastException e1) {
-								value = ((List<Dictionary<string,object>>)value)[i0];
+								try {
+									value = ((List<string>)value)[i0];
+								}
+								catch (InvalidCastException e2) {
+									value = ((List<Dictionary<string,object>>)value)[i0];
+								}
 							}
 						}
 						catch (Exception e)
@@ -302,18 +307,27 @@ namespace helicon
 
 				case "COUNT":
 					var src = ContextGet(val[1]);
-					try { result = ((List<object>)src).Count; }
+					try {
+						result = ((List<object>)src).Count;
+					}
 					catch (InvalidCastException e1)
 					{
-						
-						try { result = ((List<Dictionary<string,object>>)src).Count; }
+						try {
+							result = ((List<string>)src).Count;
+						}
 						catch (InvalidCastException e2)
 						{
 							try {
-								result = ((Byte[])ContextGet(val[1])).Length;
+								result = ((List<Dictionary<string,object>>)src).Count;
 							}
-							catch (Exception e3) {
-								result = "0";
+							catch (InvalidCastException e3)
+							{
+								try {
+									result = ((Byte[])ContextGet(val[1])).Length;
+								}
+								catch (Exception e4) {
+									result = "0";
+								}
 							}
 						}
 					}
@@ -429,6 +443,14 @@ namespace helicon
 		// *****************************************************
 		// Xml data accessors.
 
+		private static string GetInnerText (XmlElement node, string def)
+		{
+			if (node.InnerText.Length > 0)
+				return Convert.ToString(node.InnerText.Trim());
+
+			return Convert.ToString(def);
+		}
+
 		private static string FmtInnerText (XmlElement node, string def)
 		{
 			if (node.InnerText.Length > 0)
@@ -451,6 +473,14 @@ namespace helicon
 				return Format(node.InnerText.Trim());
 
 			return Format(def);
+		}
+
+		private static string GetAttr (XmlElement node, string name, string def, bool trim=true)
+		{
+			if (trim)
+				return Convert.ToString(XmlUtils.GetStringAttribute (node, name, def).Trim());
+			else
+				return Convert.ToString(XmlUtils.GetStringAttribute (node, name, def));
 		}
 
 		private static string FmtAttr (XmlElement node, string name, string def, bool trim=true)
@@ -503,8 +533,8 @@ namespace helicon
 			if (sCSCode[0] == '(')
 				return GetBool(NewEvalExpr(sCSCode));
 
-			//LOG.write("Using deprecated eval: " + sCSCode);
-
+			throw new Exception ("Deprecated Eval detected: " + sCSCode);
+/*
 			CodeDomProvider icc = CodeDomProvider.CreateProvider("CSharp");
 			CompilerParameters cp = new CompilerParameters();
 
@@ -534,7 +564,7 @@ namespace helicon
 			
 			try { return (bool)s == true; } catch (Exception) { }
 			try { return (int)s != 0; } catch (Exception) { }
-
+*/
 			return false;
 		}
 
@@ -551,8 +581,32 @@ namespace helicon
 		{
 			string token = "";
 
-			while (offs < expr.Length && expr[offs] != ' ' && expr[offs] != ')')
-				token += expr[offs++];
+			if (offs >= expr.Length)
+				return token;
+
+			if (expr[offs] == '"')
+			{
+				offs++;
+
+				while (offs < expr.Length && expr[offs] != '"')
+					token += expr[offs++];
+
+				offs++;
+
+				token = Format(token).ToString();
+			}
+			else if (expr[offs] == '[')
+			{
+				while (offs < expr.Length && !token.EndsWith("]]"))
+					token += expr[offs++];
+
+				token = Format(token).ToString();
+			}
+			else
+			{
+				while (offs < expr.Length && expr[offs] != ' ' && expr[offs] != ')')
+					token += expr[offs++];
+			}
 
 			return token;
 		}
@@ -569,6 +623,7 @@ namespace helicon
 				bool b1, b2;
 				string s1, s2;
 				object res = "";
+				int i1, i2;
 
 				switch (op.ToUpper())
 				{
@@ -596,37 +651,37 @@ namespace helicon
 						res = d1 / d2;
 						break;
 
-					case "==": case "EQ":
+					case "==": case "EQ": case "EQUALS":
 						s1 = XEvalExpr().ToString();
 						s2 = XEvalExpr().ToString();
 						res = s1 == s2 ? "1" : "0";
 						break;
 
-					case "!=": case "NE":
+					case "!=": case "NE": case "NOT-EQUALS":
 						s1 = XEvalExpr().ToString();
 						s2 = XEvalExpr().ToString();
 						res = s1 != s2 ? "1" : "0";
 						break;
 
-					case "<=": case "LE":
+					case "<=": case "LE": case "LESS-EQUAL":
 						d1 = GetDouble(XEvalExpr());
 						d2 = GetDouble(XEvalExpr());
 						res = d1 <= d2 ? "1" : "0";
 						break;
 
-					case "<": case "LT":
+					case "<": case "LT": case "LESS-THAN":
 						d1 = GetDouble(XEvalExpr());
 						d2 = GetDouble(XEvalExpr());
 						res = d1 < d2 ? "1" : "0";
 						break;
 
-					case ">=": case "GE":
+					case ">=": case "GE": case "GREATER-EQUAL":
 						d1 = GetDouble(XEvalExpr());
 						d2 = GetDouble(XEvalExpr());
 						res = d1 >= d2 ? "1" : "0";
 						break;
 
-					case ">": case "GT":
+					case ">": case "GT": case "GREATER-THAN":
 						d1 = GetDouble(XEvalExpr());
 						d2 = GetDouble(XEvalExpr());
 						res = d1 > d2 ? "1" : "0";
@@ -660,6 +715,57 @@ namespace helicon
 						}
 
 						res = b1 ? "1" : "0";
+						break;
+
+					case "SUBSTR":
+						i1 = GetInt(XEvalExpr());
+						i2 = GetInt(XEvalExpr());
+
+						s1 = XEvalExpr().ToString();
+
+						if (s1.Length != 0)
+						{
+							if (i1 < 0) i1 += s1.Length;
+							if (i2 < 0) i2 += s1.Length;
+
+							if (i1 < 0) i1 = 0;
+							if (i2 < 0) i2 = 0;
+
+							if (i1 >= s1.Length) i1 = s1.Length-1;
+							if (i2 >= s1.Length) i2 = s1.Length-1;
+
+							res = s1.Substring(i1, i2);
+						}
+						else
+							res = "";
+
+						break;
+
+					case "?": case "IF":
+						b1 = GetBool(XEvalExpr());
+
+						s1 = XEvalExpr().ToString();
+						s2 = XEvalExpr().ToString();
+
+						res = b1 ? s1 : s2;
+						break;
+
+					case "UPPER":
+						res = XEvalExpr().ToString().ToUpper();
+						break;
+
+					case "LOWER":
+						res = XEvalExpr().ToString().ToLower();
+						break;
+
+					case "STARTSWITH":
+						s1 = XEvalExpr().ToString();
+						res = XEvalExpr().ToString().StartsWith(s1) ? "1" : "0";
+						break;
+
+					case "ENDSWITH":
+						s1 = XEvalExpr().ToString();
+						res = XEvalExpr().ToString().EndsWith(s1) ? "1" : "0";
 						break;
 				}
 
@@ -699,10 +805,9 @@ namespace helicon
 		public static object EvalExpr (string sCSCode)
 		{
 			if (sCSCode[0] == '(') return NewEvalExpr(sCSCode);
+			throw new Exception ("Deprecated eval detected: " + sCSCode);
 
-			//LOG.write("Using deprecated eval: " + sCSCode);
-
-			CodeDomProvider icc = CodeDomProvider.CreateProvider("CSharp");
+			/*CodeDomProvider icc = CodeDomProvider.CreateProvider("CSharp");
 			CompilerParameters cp = new CompilerParameters();
 
 			cp.CompilerOptions = "/t:library";
@@ -728,7 +833,8 @@ namespace helicon
 			MethodInfo mi = t.GetMethod("EvalCode");
 
 			object s = mi.Invoke(o, null);
-			return s;
+			return s;*/
+			return null;
 		}
 		
 		private static void EnableAnsiConsole()
@@ -795,7 +901,7 @@ namespace helicon
 
 			try
 			{
-				ExecuteProcess (args[0], false);
+				ExecuteProcess (args[0], args, false);
 			}
 			catch (Exception e)
 			{
@@ -807,7 +913,7 @@ namespace helicon
 		}
 
 		/* ******************************************** */
-		public static void ExecuteProcess (string filename, bool reEntry)
+		public static void ExecuteProcess (string filename, string[] args, bool reEntry)
 		{
 			FileInfo f = new FileInfo (filename);
 			if (!f.Exists)
@@ -875,6 +981,16 @@ namespace helicon
 				CONTEXT["@BLUE"] = "\x1B[94m";
 				CONTEXT["@MAGENTA"] = "\x1B[95m";
 				CONTEXT["@CYAN"] = "\x1B[96m";
+
+				if (args != null)
+				{
+					List<string> _args = new List<string> ();
+
+					for (int i = 1; i < args.Length; i++)
+						_args.Add(args[i]);
+
+					CONTEXT["ARGS"] = _args;
+				}
 			}
 
 			// *****************************************************
@@ -1082,7 +1198,7 @@ namespace helicon
 			if (!node.HasAttribute("When"))
 				return true;
 
-			string condition = FmtAttr(node, "When", "");
+			string condition = GetAttr(node, "When", "");
 			if (condition.Length == 0) return true;
 
 			if (Eval(condition.Replace('\'', '"')))
@@ -1118,8 +1234,8 @@ namespace helicon
 			if (!NodeCheck(node)) return;
 
 			try {
-				if (GetBool(FmtAttr(node, "Eval", "FALSE")))
-					Console.WriteLine (EvalExpr(FmtInnerText(node, "")));
+				if (GetBool(FmtAttr(node, "Eval", "FALSE")) || GetBool(FmtAttr(node, "Expr", "FALSE")))
+					Console.WriteLine (EvalExpr(GetInnerText(node, "")));
 				else
 					Console.WriteLine (FmtInnerText (node, ""));
 			}
@@ -1200,8 +1316,8 @@ namespace helicon
 		{
 			if (!NodeCheck(node)) return;
 
-			if (GetBool(FmtAttr(node, "Eval", "FALSE")))
-				CONTEXT[FmtAttr(node, "Name", "Var")] = EvalExpr(FmtInnerText(node, ""));
+			if (GetBool(FmtAttr(node, "Eval", "FALSE")) || GetBool(FmtAttr(node, "Expr", "FALSE")))
+				CONTEXT[FmtAttr(node, "Name", "Var")] = EvalExpr(GetInnerText(node, ""));
 			else if (GetBool(FmtAttr(node, "Object", "FALSE")))
 				CONTEXT[FmtAttr(node, "Name", "Var")] = FmtInnerTextObj(node, "");
 			else
@@ -1674,7 +1790,7 @@ namespace helicon
 		{
 			if (!NodeCheck(node)) return;
 
-			string condition = FmtAttr(node, "Condition", "");
+			string condition = GetAttr(node, "Condition", "");
 			if (condition == "") return;
 
 			condition = condition.Replace('\'', '"');
@@ -1828,7 +1944,7 @@ namespace helicon
 
 				FileInfo oldProcessFileInfo = processFileInfo;
 
-				ExecuteProcess (name, true);
+				ExecuteProcess (name, null, true);
 
 				processFileInfo = oldProcessFileInfo;
 			}
