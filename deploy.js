@@ -30,10 +30,12 @@ function run (command)
 rl.question("Version number: ", function(version)
 {
 	run('if exist temporal (rmdir /s /q temporal)')
-	.then(r => run('git clone https://github.com/ironrocksoftware/helicon temporal --no-checkout'))
-	.then(r => run('copy dist\\* temporal'))
+	.then(r => run('mkdir temporal'))
+	.then(r => run('xcopy /q /e /i .git temporal\\.git'))
 	.then(r => run('cd temporal'))
 	.then(r => run('git branch temporal'))
+	.then(r => run('git checkout temporal'))
+	.then(r => run('copy ..\\dist\\* .'))
 	.then(r => run('git add .'))
 	.then(r => run('git commit -m "Preparing for release: v'+version+'"'))
 	.then(r => run('git push origin temporal'))
@@ -41,6 +43,7 @@ rl.question("Version number: ", function(version)
 	.then(r => run('git push --tags'))
 	.then(r => run('cd ..'))
 	.then(r => run('git push origin --delete temporal'))
+	.then(r => run('rmdir /s /q temporal'))
 	.then(() => {
 		console.log();
 		console.log('\x1B[93m * Deployment completed: '+version+'\x1B[0m');
