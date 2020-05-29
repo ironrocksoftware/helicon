@@ -27,41 +27,28 @@ function run (command)
 	});
 };
 
-rl.question("Version number?", function(name)
+rl.question("Version number: ", function(version)
 {
-	rl.close();
+	run(r => run('rmdir /s /q temporal'))
+	.then(r => run('git clone https://github.com/ironrocksoftware/helicon temporal --no-checkout'))
+	.then(r => run('copy dist\* temporal'))
+	.then(r => run('cd temporal'))
+	.then(r => run('git branch temporal'))
+	.then(r => run('git add .'))
+	.then(r => run('git commit -m "Preparing for release: v'+version+'"'))
+	.then(r => run('git push origin temporal'))
+	.then(r => run('git tag -f v' + version))
+	.then(r => run('git push --tags'))
+	.then(r => run('cd ..'))
+	.then(r => run('git push origin --delete temporal'))
+	.then(() => {
+		console.log();
+		console.log('\x1B[93m * Deployment completed: '+version+'\x1B[0m');
+		rl.close();
+	});
 });
 
 rl.on("close", function()
 {
 	process.exit(0);
-});
-
-run('svn-msg "Published: v'+version+'"')
-.then(r => run('git add .'))
-.then(r => run('git commit -F .svn\\messages.log'))
-.then(r => run('git push'))
-.then(r => run('git branch temporal'))
-.then(r => run('git checkout temporal'))
-
-.then(r => run('del .gitignore'))
-.then(r => run('del deploy.js'))
-
-.then(r => run('del README.md'))
-
-
-
-.then(r => run('git commit -a -m "Prepa
-ring for release: '+version+'"'))
-.then(r => run('git push origin temporal'))
-.then(r => run('git tag -f v' + version))
-.then(r => run('git push --tags'))
-.then(r => run('git checkout master'))
-.then(r => run('git branch -D temporal'))
-.then(r => run('git push origin --delete temporal'))
-//.then(r => run('git reset'))
-
-.then(() => {
-	console.log();
-	console.log('\x1B[93m * Deployment completed.\x1B[0m');
 });
