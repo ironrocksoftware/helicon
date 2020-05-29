@@ -29,9 +29,9 @@ function run (command)
 
 rl.question("Version number: ", function(version)
 {
-	run(r => run('rmdir /s /q temporal'))
+	run('if exist temporal (rmdir /s /q temporal)')
 	.then(r => run('git clone https://github.com/ironrocksoftware/helicon temporal --no-checkout'))
-	.then(r => run('copy dist\* temporal'))
+	.then(r => run('copy dist\\* temporal'))
 	.then(r => run('cd temporal'))
 	.then(r => run('git branch temporal'))
 	.then(r => run('git add .'))
