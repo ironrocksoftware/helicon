@@ -54,7 +54,7 @@ namespace helicon
 		private static System.Threading.Mutex mutex = null;
 		private static FileInfo processFileInfo;
 
-		private static string VERSION_NAME = "2.1.0";
+		private static string VERSION_NAME = "2.1.1";
 
 		/* *********************************************************** */
 		private static int VERSION;
@@ -405,6 +405,57 @@ namespace helicon
 					}
 
 					result = ((DateTime)result).ToString("yyyy-MM-dd");
+					break;
+
+				case "DATETIME_YEAR":
+					// DATETIME_YEAR
+					// DATETIME_YEAR <DATE>
+					// DATETIME_YEAR <DATE> <TIME>
+					if (val.Length == 1) {
+						result = DateTime.Now;
+					}
+					else {
+						if (val.Length == 3)
+							val[1] = val[1] + " " + val[2];
+
+						result = DateTime.ParseExact(val[1].ToString(), new string[] { "MM/dd/yyyy HH:mm:ss", "yyyy-MM-dd HH:mm:ss", "MM/dd/yyyy", "yyyy-MM-dd" }, null, System.Globalization.DateTimeStyles.None);
+					}
+
+					result = ((DateTime)result).ToString("yyyy");
+					break;
+
+				case "DATETIME_MONTH":
+					// DATETIME_MONTH
+					// DATETIME_MONTH <DATE>
+					// DATETIME_MONTH <DATE> <TIME>
+					if (val.Length == 1) {
+						result = DateTime.Now;
+					}
+					else {
+						if (val.Length == 3)
+							val[1] = val[1] + " " + val[2];
+
+						result = DateTime.ParseExact(val[1].ToString(), new string[] { "MM/dd/yyyy HH:mm:ss", "yyyy-MM-dd HH:mm:ss", "MM/dd/yyyy", "yyyy-MM-dd" }, null, System.Globalization.DateTimeStyles.None);
+					}
+
+					result = ((DateTime)result).ToString("MM");
+					break;
+
+				case "DATETIME_DAY":
+					// DATETIME_DAY
+					// DATETIME_DAY <DATE>
+					// DATETIME_DAY <DATE> <TIME>
+					if (val.Length == 1) {
+						result = DateTime.Now;
+					}
+					else {
+						if (val.Length == 3)
+							val[1] = val[1] + " " + val[2];
+
+						result = DateTime.ParseExact(val[1].ToString(), new string[] { "MM/dd/yyyy HH:mm:ss", "yyyy-MM-dd HH:mm:ss", "MM/dd/yyyy", "yyyy-MM-dd" }, null, System.Globalization.DateTimeStyles.None);
+					}
+
+					result = ((DateTime)result).ToString("dd");
 					break;
 
 				case "DATETIME_DELTA_DAYS":
