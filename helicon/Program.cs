@@ -382,7 +382,9 @@ namespace helicon
 					}
 					else {
 						if (val.Length == 3)
-							val[1] = val[1] + " " + val[2];
+							val[1] = Convert.ToString(ContextGet(val[1])) + " " + Convert.ToString(ContextGet(val[2]));
+						else
+							val[1] = Convert.ToString(ContextGet(val[1]));
 
 						result = DateTime.ParseExact(val[1].ToString(), new string[] { "MM/dd/yyyy HH:mm:ss", "yyyy-MM-dd HH:mm:ss", "MM/dd/yyyy", "yyyy-MM-dd" }, null, System.Globalization.DateTimeStyles.None);
 					}
@@ -399,7 +401,9 @@ namespace helicon
 					}
 					else {
 						if (val.Length == 3)
-							val[1] = val[1] + " " + val[2];
+							val[1] = Convert.ToString(ContextGet(val[1])) + " " + Convert.ToString(ContextGet(val[2]));
+						else
+							val[1] = Convert.ToString(ContextGet(val[1]));
 
 						result = DateTime.ParseExact(val[1].ToString(), new string[] { "MM/dd/yyyy HH:mm:ss", "yyyy-MM-dd HH:mm:ss", "MM/dd/yyyy", "yyyy-MM-dd" }, null, System.Globalization.DateTimeStyles.None);
 					}
@@ -416,7 +420,9 @@ namespace helicon
 					}
 					else {
 						if (val.Length == 3)
-							val[1] = val[1] + " " + val[2];
+							val[1] = Convert.ToString(ContextGet(val[1])) + " " + Convert.ToString(ContextGet(val[2]));
+						else
+							val[1] = Convert.ToString(ContextGet(val[1]));
 
 						result = DateTime.ParseExact(val[1].ToString(), new string[] { "MM/dd/yyyy HH:mm:ss", "yyyy-MM-dd HH:mm:ss", "MM/dd/yyyy", "yyyy-MM-dd" }, null, System.Globalization.DateTimeStyles.None);
 					}
@@ -433,7 +439,9 @@ namespace helicon
 					}
 					else {
 						if (val.Length == 3)
-							val[1] = val[1] + " " + val[2];
+							val[1] = Convert.ToString(ContextGet(val[1])) + " " + Convert.ToString(ContextGet(val[2]));
+						else
+							val[1] = Convert.ToString(ContextGet(val[1]));
 
 						result = DateTime.ParseExact(val[1].ToString(), new string[] { "MM/dd/yyyy HH:mm:ss", "yyyy-MM-dd HH:mm:ss", "MM/dd/yyyy", "yyyy-MM-dd" }, null, System.Globalization.DateTimeStyles.None);
 					}
@@ -450,7 +458,9 @@ namespace helicon
 					}
 					else {
 						if (val.Length == 3)
-							val[1] = val[1] + " " + val[2];
+							val[1] = Convert.ToString(ContextGet(val[1])) + " " + Convert.ToString(ContextGet(val[2]));
+						else
+							val[1] = Convert.ToString(ContextGet(val[1]));
 
 						result = DateTime.ParseExact(val[1].ToString(), new string[] { "MM/dd/yyyy HH:mm:ss", "yyyy-MM-dd HH:mm:ss", "MM/dd/yyyy", "yyyy-MM-dd" }, null, System.Globalization.DateTimeStyles.None);
 					}
@@ -465,16 +475,19 @@ namespace helicon
 
 					if (val.Length == 2) {
 						result = DateTime.Now;
-						tmp_i = int.Parse(val[1]);
+						tmp_i = int.Parse(Convert.ToString(ContextGet(val[1])));
 					}
 					else {
 						if (val.Length == 4)
 						{
-							val[1] = val[1] + " " + val[2];
-							tmp_i = int.Parse(val[3]);
+							val[1] = Convert.ToString(ContextGet(val[1])) + " " + Convert.ToString(ContextGet(val[2]));
+							tmp_i = int.Parse(Convert.ToString(ContextGet(val[3])));
 						}
 						else
-							tmp_i = int.Parse(val[2]);
+						{
+							val[1] = Convert.ToString(ContextGet(val[1]));
+							tmp_i = int.Parse(Convert.ToString(ContextGet(val[2])));
+						}
 
 						result = DateTime.ParseExact(val[1].ToString(), new string[] { "MM/dd/yyyy HH:mm:ss", "yyyy-MM-dd HH:mm:ss", "MM/dd/yyyy", "yyyy-MM-dd" }, null, System.Globalization.DateTimeStyles.None);
 					}
