@@ -222,6 +222,8 @@ namespace helicon
 
 			Regex regex;
 			MatchCollection matches;
+			
+			int tmp_i;
 
 			switch (val[0])
 			{
@@ -361,6 +363,61 @@ namespace helicon
 					result = new FileInfo(ContextGet(val[1]).ToString()).Name;
 					if (((string)result).LastIndexOf('.') != -1)
 						result = ((string)result).Substring(0, ((string)result).LastIndexOf('.'));
+					break;
+
+				case "DATETIME":
+					if (val.Length == 1) {
+						result = DateTime.Now;
+					}
+					else {
+						if (val.Length == 3)
+							val[1] = val[1] + " " + val[2];
+
+						result = DateTime.ParseExact(val[1].ToString(), new string[] { "MM/dd/yyyy HH:mm:ss", "yyyy-MM-dd HH:mm:ss", "MM/dd/yyyy", "yyyy-MM-dd" }, null, System.Globalization.DateTimeStyles.None);
+					}
+
+					result = ((DateTime)result).ToString("yyyy-MM-dd HH:mm:ss");
+					break;
+
+				case "DATETIME_DATE":
+					// DATETIME_DATE
+					// DATETIME_DATE <DATE>
+					// DATETIME_DATE <DATE> <TIME>
+					if (val.Length == 1) {
+						result = DateTime.Now;
+					}
+					else {
+						if (val.Length == 3)
+							val[1] = val[1] + " " + val[2];
+
+						result = DateTime.ParseExact(val[1].ToString(), new string[] { "MM/dd/yyyy HH:mm:ss", "yyyy-MM-dd HH:mm:ss", "MM/dd/yyyy", "yyyy-MM-dd" }, null, System.Globalization.DateTimeStyles.None);
+					}
+
+					result = ((DateTime)result).ToString("yyyy-MM-dd");
+					break;
+
+				case "DATETIME_DELTA_DAYS":
+					// DATETIME_DELTA_DAYS <DAYS>
+					// DATETIME_DELTA_DAYS <DATE> <DAYS>
+					// DATETIME_DELTA_DAYS <DATE> <TIME> <DAYS>
+
+					if (val.Length == 2) {
+						result = DateTime.Now;
+						tmp_i = int.Parse(val[1]);
+					}
+					else {
+						if (val.Length == 4)
+						{
+							val[1] = val[1] + " " + val[2];
+							tmp_i = int.Parse(val[3]);
+						}
+						else
+							tmp_i = int.Parse(val[2]);
+
+						result = DateTime.ParseExact(val[1].ToString(), new string[] { "MM/dd/yyyy HH:mm:ss", "yyyy-MM-dd HH:mm:ss", "MM/dd/yyyy", "yyyy-MM-dd" }, null, System.Globalization.DateTimeStyles.None);
+					}
+
+					result = ((DateTime)result).Add(new TimeSpan(tmp_i, 0, 0, 0)).ToString("yyyy-MM-dd");
 					break;
 
 				default:
