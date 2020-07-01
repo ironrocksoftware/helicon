@@ -54,7 +54,7 @@ namespace helicon
 		private static System.Threading.Mutex mutex = null;
 		private static FileInfo processFileInfo;
 
-		private static string VERSION_NAME = "2.97";
+		private static string VERSION_NAME = "2.98";
 
 		/* *********************************************************** */
 		private static int VERSION;
@@ -1603,7 +1603,7 @@ namespace helicon
 				if (File.Exists(path))
 					File.Delete(path);
 
-				string tmp = Api.executeRequest(url, "GET", false);
+				string tmp = Api.executeRequest(url, "get", false);
 				byte[] data = Encoding.GetEncoding(1252).GetBytes(tmp);
 
 				File.WriteAllBytes(path, data);

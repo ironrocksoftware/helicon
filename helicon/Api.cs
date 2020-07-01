@@ -108,17 +108,48 @@ namespace helicon
 		{
 			string result = "";
 
+			System.Net.ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | SecurityProtocolType.Tls13;
+			multipartQuery += "--" + multipartBoundary + "--\r\n\r\n";
+
 			try {
 				WebClient netClient = new WebClient();
 				
-				System.Net.ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | SecurityProtocolType.Tls13;
-				
 				netClient.Headers.Add(HttpRequestHeader.UserAgent, "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:64.0) Gecko/20100101 Firefox/64.0");
 
+				string cookieHeader = "";
+
+				foreach (string cookieName in cookies.AllKeys) {
+					cookieHeader += cookieName + "=" + cookies[cookieName] + "; ";
+				}
+
+				if (cookieHeader.Length > 0)
+					netClient.Headers["Cookie"] = cookieHeader;
+
 				if (method == "get")
-					result = netClient.DownloadString(url + "?" + (query != "" ? query.Substring(1) : ""));
+				{
+					result = netClient.DownloadString(url + (url.IndexOf("?") != -1 ? "&" : "?") + (query != "" ? query.Substring(1) : ""));
+				}
 				else
-					result = netClient.UploadString(url, (query != "" ? query.Substring(1) : ""));
+				{
+					netClient.Headers["Content-Type"] = "multipart/form-data; boundary=" + multipartBoundary;
+					result = netClient.UploadString(url, multipartQuery);
+				}
+
+				WebHeaderCollection h = netClient.ResponseHeaders;
+
+				for (int i = 0; i < h.Count; i++)
+				{
+					string hdr = h.GetKey(i);
+					if (hdr.ToLower() != "set-cookie") continue;
+
+					foreach (string value in h.GetValues(hdr))
+					{
+						string[] t0 = value.Split(';');
+						string[] t1 = t0[0].Split('=');
+
+						cookies.Set(t1[0].Trim(), t1[1].Trim());
+					}
+				}
 			}
 			catch (Exception e) {
 				errstr = e.Message + "\n" + result;
@@ -147,7 +178,6 @@ namespace helicon
 			string result = "";
 
 			System.Net.ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | SecurityProtocolType.Tls13;
-
 			multipartQuery += "--" + multipartBoundary + "--\r\n\r\n";
 
 			try {
@@ -157,8 +187,7 @@ namespace helicon
 
 				string cookieHeader = "";
 
-				foreach (string cookieName in cookies.AllKeys)
-				{
+				foreach (string cookieName in cookies.AllKeys) {
 					cookieHeader += cookieName + "=" + cookies[cookieName] + "; ";
 				}
 
