@@ -54,7 +54,7 @@ namespace helicon
 		private static System.Threading.Mutex mutex = null;
 		private static FileInfo processFileInfo;
 
-		private static string VERSION_NAME = "2.96";
+		private static string VERSION_NAME = "2.97";
 
 		/* *********************************************************** */
 		private static int VERSION;
@@ -1115,6 +1115,7 @@ namespace helicon
 					case "FileDelete":
 					case "FileCopy":
 					case "FileMove":
+					case "FileDownload":
 					case "DirCreate":
 					case "DirDelete":
 						continue;
@@ -1216,6 +1217,7 @@ namespace helicon
 					case "FileDelete":				FileDelete(node); continue;
 					case "FileCopy":				FileCopy(node); continue;
 					case "FileMove":				FileMove(node); continue;
+					case "FileDownload":			FileDownload(node); continue;
 					case "DirCreate":				DirCreate(node); continue;
 					case "DirDelete":				DirDelete(node); continue;
 
@@ -1572,6 +1574,41 @@ namespace helicon
 			catch (Exception e)
 			{
 				throw new Exception ("FileMove(" + src + "): " + e.Message);
+			}
+		}
+
+		// *****************************************************
+		private static void FileDownload (XmlElement node)
+		{
+			if (!NodeCheck(node)) return;
+
+			string url = FmtAttr(node, "Url", "");
+			if (url.Length == 0) return;
+
+			string path = FmtAttr(node, "Path", "");
+			if (path.Length == 0) return;
+
+			Api.clearRequest();
+			Api.clearCookies();
+
+			try
+			{
+				FileInfo fi = new FileInfo (path);
+
+				if (!File.Exists(fi.DirectoryName))
+					Directory.CreateDirectory(fi.DirectoryName);
+
+				if (File.Exists(path))
+					File.Delete(path);
+
+				string tmp = Api.executeRequest(url, "GET", false);
+				byte[] data = Encoding.GetEncoding(1252).GetBytes(tmp);
+
+				File.WriteAllBytes(path, data);
+			}
+			catch (Exception e)
+			{
+				throw new Exception ("FileDownload(" + path + "): " + e.Message);
 			}
 		}
 
