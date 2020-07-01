@@ -54,7 +54,7 @@ namespace helicon
 		private static System.Threading.Mutex mutex = null;
 		private static FileInfo processFileInfo;
 
-		private static string VERSION_NAME = "2.99";
+		private static string VERSION_NAME = "2.1.0";
 
 		/* *********************************************************** */
 		private static int VERSION;
@@ -237,6 +237,14 @@ namespace helicon
 
 				case "STRING":
 					result = GetUtf8String(GetByteArray(ContextGet(val[1])));
+					break;
+
+				case "INT":
+					result = GetInt(ContextGet(val[1]));
+					break;
+
+				case "FLOAT":
+					result = GetDouble(ContextGet(val[1]));
 					break;
 
 				case "FILE_SIZE":
