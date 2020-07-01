@@ -366,6 +366,9 @@ namespace helicon
 					break;
 
 				case "DATETIME":
+				// DATETIME
+				// DATETIME <DATE>
+				// DATETIME <DATE> <TIME>
 					if (val.Length == 1) {
 						result = DateTime.Now;
 					}
@@ -1166,6 +1169,8 @@ namespace helicon
 					case "Switch":
 					case "SendMail":
 					case "Sleep":
+					case "ZipExtract":
+					case "ZipCompress":
 						continue;
 				}
 
@@ -1246,6 +1251,8 @@ namespace helicon
 					case "Switch":					Switch(node); break;
 					case "SendMail":				SendMail(node); break;
 					case "Sleep":					Sleep(node); break;
+					case "ZipExtract":				ZipExtract(node); break;
+					case "ZipCompress":				ZipCompress(node); break;
 				}
 			}
 		}
@@ -3531,5 +3538,94 @@ namespace helicon
 
 			System.Threading.Thread.Sleep(amount);
 		}
+		
+		// *****************************************************
+		private static void ZipExtract (XmlElement node)
+		{
+			if (!NodeCheck(node)) return;
+
+			bool strict = GetBool(FmtAttr(node, "Strict", "FALSE"));
+
+			string path = FmtAttr(node, "Path", "");
+			if (path.Length == 0)
+			{
+				if (strict)
+					throw new Exception ("ZipExtract(): Empty path specified.");
+
+				return;
+			}
+
+			if (strict && !File.Exists(path))
+				throw new Exception ("ZipExtract("+path+"): File not found.");
+
+			string target = FmtAttr(node, "Target", "");
+			if (target.Length == 0)
+			{
+				if (strict)
+					throw new Exception ("ZipExtract(): Target path not specified.");
+
+				return;
+			}
+
+			if (!Directory.Exists(target))
+				Directory.CreateDirectory(target);
+
+			try
+			{
+				System.IO.Compression.ZipFile.ExtractToDirectory(path, target);
+				CONTEXT["ERRSTR"] = "";
+			}
+			catch (Exception e)
+			{
+				if (strict) throw new Exception ("ZipExtract("+path+"): " + e.Message);
+				CONTEXT["ERRSTR"] = e.Message;
+			}
+		}
+	
+		// *****************************************************
+		private static void ZipCompress (XmlElement node)
+		{
+			if (!NodeCheck(node)) return;
+
+			bool strict = GetBool(FmtAttr(node, "Strict", "FALSE"));
+
+			string path = FmtAttr(node, "Path", "");
+			if (path.Length == 0)
+			{
+				if (strict)
+					throw new Exception ("ZipCompress(): Empty path specified.");
+
+				return;
+			}
+
+			string source = FmtAttr(node, "Source", "");
+			if (source.Length == 0)
+			{
+				if (strict)
+					throw new Exception ("ZipCompress(): Source path not specified.");
+
+				return;
+			}
+
+			if (!Directory.Exists(source))
+			{
+				if (strict)
+					throw new Exception ("ZipCompress(): Source path does not exist.");
+
+				return;
+			}
+
+			try
+			{
+				System.IO.Compression.ZipFile.CreateFromDirectory(source, path);
+				CONTEXT["ERRSTR"] = "";
+			}
+			catch (Exception e)
+			{
+				if (strict) throw new Exception ("ZipCompress("+path+"): " + e.Message);
+				CONTEXT["ERRSTR"] = e.Message;
+			}
+		}
+
 	}
 };
