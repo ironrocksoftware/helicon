@@ -1115,6 +1115,8 @@ namespace helicon
 					case "FileDelete":
 					case "FileCopy":
 					case "FileMove":
+					case "DirCreate":
+					case "DirDelete":
 						continue;
 
 					case "SqlOpen":
@@ -1214,6 +1216,8 @@ namespace helicon
 					case "FileDelete":				FileDelete(node); continue;
 					case "FileCopy":				FileCopy(node); continue;
 					case "FileMove":				FileMove(node); continue;
+					case "DirCreate":				DirCreate(node); continue;
+					case "DirDelete":				DirDelete(node); continue;
 
 					case "SqlOpen":					SqlOpen(node); continue;
 					case "SqlClose":				SqlClose(node); continue;
@@ -1568,6 +1572,67 @@ namespace helicon
 			catch (Exception e)
 			{
 				throw new Exception ("FileMove(" + src + "): " + e.Message);
+			}
+		}
+
+		// *****************************************************
+		private static void DirCreate (XmlElement node)
+		{
+			if (!NodeCheck(node)) return;
+
+			bool strict = GetBool(FmtAttr(node, "Strict", "TRUE"));
+
+			string path = FmtAttr(node, "Path", "");
+			if (path.Length == 0)
+			{
+				if (strict)
+					throw new Exception ("DirCreate(): Empty path specified.");
+
+				return;
+			}
+
+			if (Directory.Exists(path))
+				return;
+
+			try
+			{
+				Directory.CreateDirectory(path);
+			}
+			catch (Exception e)
+			{
+				if (strict) throw new Exception ("DirCreate("+path+"): " + e.Message);
+			}
+		}
+
+		// *****************************************************
+		private static void DirDelete (XmlElement node)
+		{
+			if (!NodeCheck(node)) return;
+
+			bool strict = GetBool(FmtAttr(node, "Strict", "TRUE"));
+
+			string path = FmtAttr(node, "Path", "");
+			if (path.Length == 0)
+			{
+				if (strict)
+					throw new Exception ("DirDelete(): Empty path specified.");
+
+				return;
+			}
+
+			if (!Directory.Exists(path))
+				return;
+
+			try
+			{
+				if (GetBool(FmtAttr(node, "Recursive", "FALSE")))
+					Directory.Delete(path, true);
+				else
+					Directory.Delete(path);
+			}
+			catch (Exception e)
+			{
+				if (strict) throw new Exception ("DirDelete("+path+"): " + e.Message);
 			}
 		}
 
@@ -3544,7 +3609,7 @@ namespace helicon
 		{
 			if (!NodeCheck(node)) return;
 
-			bool strict = GetBool(FmtAttr(node, "Strict", "FALSE"));
+			bool strict = GetBool(FmtAttr(node, "Strict", "TRUE"));
 
 			string path = FmtAttr(node, "Path", "");
 			if (path.Length == 0)
@@ -3567,8 +3632,8 @@ namespace helicon
 				return;
 			}
 
-			if (!Directory.Exists(target))
-				Directory.CreateDirectory(target);
+			if (Directory.Exists(target))
+				Directory.Delete(target, true);
 
 			try
 			{
@@ -3587,7 +3652,7 @@ namespace helicon
 		{
 			if (!NodeCheck(node)) return;
 
-			bool strict = GetBool(FmtAttr(node, "Strict", "FALSE"));
+			bool strict = GetBool(FmtAttr(node, "Strict", "TRUE"));
 
 			string path = FmtAttr(node, "Path", "");
 			if (path.Length == 0)
