@@ -1125,6 +1125,7 @@ namespace helicon
 					case "SqlStatement":
 					case "SqlLoadRow":
 					case "SqlLoadArray":
+					case "CsvLoadArray":
 						continue;
 
 					case "ForEachFile":
@@ -1226,6 +1227,7 @@ namespace helicon
 					case "SqlStatement":			SqlStatement(node); continue;
 					case "SqlLoadRow":				SqlLoadRow(node); continue;
 					case "SqlLoadArray":			SqlLoadArray(node); continue;
+					case "CsvLoadArray":			CsvLoadArray(node); continue;
 
 					case "ForEachFile":				ForEachFile(node); continue;
 					case "ForEachRow":				ForEachRow(node); continue;
@@ -1860,6 +1862,40 @@ namespace helicon
 					throw new Exception ("SqlLoadArray: " + e.Message);
 
 				LOG.write ("Error: SqlLoadArray: " + e.Message);
+			}
+		}
+
+		// *****************************************************
+		private static void CsvLoadArray (XmlElement node)
+		{
+			if (!NodeCheck(node)) return;
+
+			bool strict = GetBool(FmtAttr(node, "Strict", "TRUE"));
+			bool firstRowHeaders = GetBool(FmtAttr(node, "Header", "TRUE"));
+			bool removeQuotes = GetBool(FmtAttr(node, "RemoveQuotes", "TRUE"));
+			char delimiter = FmtAttr(node, "Delimiter", ",").ToCharArray()[0];
+
+			string path = FmtAttr(node, "Path", "");
+			if (path.Length == 0)
+			{
+				if (strict) throw new Exception ("CsvLoadArray(): Empty path specified.");
+				return;
+			}
+
+			if (!File.Exists(path))
+			{
+				if (strict) throw new Exception ("CsvLoadArray(): Input file does not exist.");
+				return;
+			}
+
+			try
+			{
+				List<Dictionary<string, object>> result = CsvUtils.loadIntoArray(path, firstRowHeaders, delimiter, removeQuotes);
+				CONTEXT[FmtAttr(node, "Into", "Array")] = result;
+			}
+			catch (Exception e)
+			{
+				if (strict) throw new Exception ("CsvLoadArray("+path+"): " + e.Message);
 			}
 		}
 
