@@ -54,7 +54,7 @@ namespace helicon
 		private static System.Threading.Mutex mutex = null;
 		private static FileInfo processFileInfo;
 
-		private static string VERSION_NAME = "2.98";
+		private static string VERSION_NAME = "2.99";
 
 		/* *********************************************************** */
 		private static int VERSION;

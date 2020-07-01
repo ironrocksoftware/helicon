@@ -18,6 +18,8 @@ namespace helicon
 			str = str.Trim().Replace("\r", "") + "\n";
 			chars = str.ToCharArray();
 
+			bool quotes_allowed = true;
+
 			for (i = 0; i < str.Length; i++)
 			{
 				switch (state)
@@ -26,7 +28,7 @@ namespace helicon
 						if (chars[i] <= 32 && chars[i] != '\n')
 							break;
 
-						if (chars[i] == '"') state = 1; else state = 3;
+						if (chars[i] == '"' && quotes_allowed) state = 1; else state = 3;
 						st = i;
 
 						if (chars[i] == delim || chars[i] == '\n')
@@ -68,7 +70,6 @@ namespace helicon
 					case 5:
 						if (chars[i] == '\n')
 						{
-							Console.Write("XXXXXXX\n");
 							stack[count++] = "";
 						}
 
