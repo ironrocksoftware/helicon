@@ -54,7 +54,7 @@ namespace helicon
 		private static System.Threading.Mutex mutex = null;
 		private static FileInfo processFileInfo;
 
-		private static string VERSION_NAME = "2.1.3";
+		private static string VERSION_NAME = "2.1.4";
 
 		/* *********************************************************** */
 		private static int VERSION;
@@ -759,28 +759,33 @@ namespace helicon
 
 				switch (op.ToUpper())
 				{
-					case "+":
+					case "+": case "ADD":
 						d1 = GetDouble(XEvalExpr());
 						d2 = GetDouble(XEvalExpr());
 						res = d1 + d2;
 						break;
 
-					case "-":
+					case "-": case "SUB":
 						d1 = GetDouble(XEvalExpr());
 						d2 = GetDouble(XEvalExpr());
 						res = d1 - d2;
 						break;
 
-					case "*":
+					case "*": case "MUL":
 						d1 = GetDouble(XEvalExpr());
 						d2 = GetDouble(XEvalExpr());
 						res = d1 * d2;
 						break;
 
-					case "/":
+					case "/": case "DIV":
 						d1 = GetDouble(XEvalExpr());
 						d2 = GetDouble(XEvalExpr());
 						res = d1 / d2;
+						break;
+
+					case "!": case "NOT":
+						d1 = GetDouble(XEvalExpr());
+						res = d1 != 0 ? "0" : "1";
 						break;
 
 					case "==": case "EQ": case "EQUALS":
@@ -898,6 +903,23 @@ namespace helicon
 					case "ENDSWITH":
 						s1 = XEvalExpr().ToString();
 						res = XEvalExpr().ToString().EndsWith(s1) ? "1" : "0";
+						break;
+
+					case "STRLEN":
+						s1 = XEvalExpr().ToString();
+						res = s1.Length;
+						break;
+						
+					case "CHRCOUNT":
+						s1 = XEvalExpr().ToString();
+						s2 = XEvalExpr().ToString();
+
+						i1 = 0;
+
+						for (int i = 0; i < s1.Length; i++)
+							i1 += s2.IndexOf(s1[i]) != -1 ? 1 : 0;
+
+						res = i1;
 						break;
 				}
 
