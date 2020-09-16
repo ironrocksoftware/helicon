@@ -54,7 +54,7 @@ namespace helicon
 		private static System.Threading.Mutex mutex = null;
 		private static FileInfo processFileInfo;
 
-		private static string VERSION_NAME = "2.1.4";
+		private static string VERSION_NAME = "2.1.5";
 
 		/* *********************************************************** */
 		private static int VERSION;
@@ -1263,6 +1263,7 @@ namespace helicon
 					case "PdfLoadText":
 					case "RegexExtract":
 					case "SplitText":
+					case "JoinItems":
 					case "ReplaceText":
 					case "Switch":
 					case "SendMail":
@@ -1349,6 +1350,7 @@ namespace helicon
 					case "PdfLoadText":				PdfLoadText(node); continue;
 					case "RegexExtract":			RegexExtract(node); continue;
 					case "SplitText":				SplitText(node); break;
+					case "JoinItems":				JoinItems(node); break;
 					case "ReplaceText":				ReplaceText(node); break;
 					case "Switch":					Switch(node); break;
 					case "SendMail":				SendMail(node); break;
@@ -1487,7 +1489,12 @@ namespace helicon
 			else if (GetBool(FmtAttr(node, "Object", "FALSE")))
 				CONTEXT[FmtAttr(node, "Name", "Var")] = FmtInnerTextObj(node, "");
 			else
-				CONTEXT[FmtAttr(node, "Name", "Var")] = FmtInnerText(node, "");
+			{
+				if (GetBool(FmtAttr(node, "Append", "FALSE")))
+					CONTEXT[FmtAttr(node, "Name", "Var")] += FmtInnerText(node, "");
+				else
+					CONTEXT[FmtAttr(node, "Name", "Var")] = FmtInnerText(node, "");
+			}
 		}
 
 		// *****************************************************
@@ -1781,7 +1788,7 @@ namespace helicon
 			SQL = new SQLWrapper (config, timeout);
 
 			if (!SQL.open())
-				throw new Exception ("SqlOpen: Unable to connect to SQL Server.");
+				throw new Exception ("SqlOpen: Unable to connect to SQL database server.");
 		}
 
 		// *****************************************************
@@ -1945,10 +1952,52 @@ namespace helicon
 				return;
 			}
 
+			bool flat = GetBool(FmtAttr(node, "Flat", "FALSE"));
+
 			try
 			{
 				List<Dictionary<string, object>> result = SQL.getNvoArray(query);
-				CONTEXT[FmtAttr(node, "Into", "Array")] = result;
+
+				if (flat)
+				{
+					List<Dictionary<string, object>> temp = new List<Dictionary<string, object>> ();
+
+					foreach (Dictionary<string,object> row in result)
+					{
+						List<Dictionary<string,object>> tmp = new List<Dictionary<string, object>> ();
+						
+						foreach (string key in row.Keys)
+						{
+							Dictionary<string,object> x = new Dictionary<string, object> ();
+
+							x.Add("Key", key);
+							x.Add("Value", row[key]);
+							tmp.Add(x);
+						}
+						
+						Dictionary<string,object> y = new Dictionary<string, object> ();
+						y.Add("Row", tmp);
+						temp.Add(y);
+					}
+
+					CONTEXT[FmtAttr(node, "Into", "Array")] = temp;
+				}
+				else
+					CONTEXT[FmtAttr(node, "Into", "Array")] = result;
+
+				if (result.Count != 0)
+				{
+					List<Dictionary<string, object>> temp = new List<Dictionary<string, object>> ();
+
+					foreach (string key in result[0].Keys)
+					{
+						Dictionary<string, object> x = new Dictionary<string, object> ();
+						x.Add("Key", key);
+						temp.Add(x);
+					}
+
+					CONTEXT[FmtAttr(node, "Into", "Keys")] = temp;
+				}
 			}
 			catch (Exception e)
 			{
@@ -3402,6 +3451,44 @@ namespace helicon
 		}
 
 		// *****************************************************
+		private static void JoinItems (XmlElement node)
+		{
+			if (!NodeCheck(node)) return;
+
+			List<Dictionary<string, object>> list;
+
+			try {
+				list = (List<Dictionary<string, object>>)CONTEXT[FmtAttr(node, "From", "Array")];
+				if (list == null) throw new Exception ("Input array "+FmtAttr(node, "From", "Array")+" is null.");
+			}
+			catch (Exception e) {
+				throw new Exception ("JoinItems: Unable to get Array: " + e.Message);
+			}
+
+			string prefix = FmtAttr(node, "Prefix", "");
+			if (prefix.Length > 0) prefix += ".";
+
+			string delim = FmtAttr(node, "Delimiter", ",");
+			string result = "";
+
+			foreach (Dictionary<string, object> row in list)
+			{
+				if (row == null)
+					continue;
+
+				if (result.Length != 0)
+					result += delim;
+
+				foreach (string name in row.Keys)
+					CONTEXT[prefix + name] = row[name];
+
+				result += FmtInnerText (node, "");
+			}
+
+			CONTEXT[FmtAttr(node, "Into", "Text")] = result;
+		}
+
+		// *****************************************************
 		private static void ReplaceText (XmlElement node)
 		{
 			if (!NodeCheck(node)) return;
@@ -3588,7 +3675,7 @@ namespace helicon
 							mm2.Attachments.Add(new System.Net.Mail.Attachment(i.Trim()));
 							mm.Attachments.Add(new System.Web.Mail.MailAttachment (new FileInfo(i.Trim()).FullName));
 						}
-						
+
 						break;
 
 					case "Subject":

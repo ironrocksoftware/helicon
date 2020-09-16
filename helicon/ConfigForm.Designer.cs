@@ -30,6 +30,8 @@ namespace helicon
 		private void InitializeComponent()
 		{
 			this.groupBox2 = new System.Windows.Forms.GroupBox();
+			this.txSqlType = new System.Windows.Forms.ComboBox();
+			this.label11 = new System.Windows.Forms.Label();
 			this.label6 = new System.Windows.Forms.Label();
 			this.txSqlServer = new System.Windows.Forms.TextBox();
 			this.label8 = new System.Windows.Forms.Label();
@@ -59,6 +61,8 @@ namespace helicon
 			// 
 			// groupBox2
 			// 
+			this.groupBox2.Controls.Add(this.txSqlType);
+			this.groupBox2.Controls.Add(this.label11);
 			this.groupBox2.Controls.Add(this.label6);
 			this.groupBox2.Controls.Add(this.txSqlServer);
 			this.groupBox2.Controls.Add(this.label8);
@@ -69,10 +73,29 @@ namespace helicon
 			this.groupBox2.Controls.Add(this.txSqlPassword);
 			this.groupBox2.Location = new System.Drawing.Point(12, 63);
 			this.groupBox2.Name = "groupBox2";
-			this.groupBox2.Size = new System.Drawing.Size(342, 138);
+			this.groupBox2.Size = new System.Drawing.Size(342, 175);
 			this.groupBox2.TabIndex = 11;
 			this.groupBox2.TabStop = false;
-			this.groupBox2.Text = "MSSQL Server Configuration";
+			this.groupBox2.Text = "SQL Credentials";
+			// 
+			// txSqlType
+			// 
+			this.txSqlType.FormattingEnabled = true;
+			this.txSqlType.Items.AddRange(new object[] {
+									"SQLServer",
+									"PostgreSQL"});
+			this.txSqlType.Location = new System.Drawing.Point(124, 134);
+			this.txSqlType.Name = "txSqlType";
+			this.txSqlType.Size = new System.Drawing.Size(201, 21);
+			this.txSqlType.TabIndex = 13;
+			// 
+			// label11
+			// 
+			this.label11.Location = new System.Drawing.Point(18, 137);
+			this.label11.Name = "label11";
+			this.label11.Size = new System.Drawing.Size(100, 23);
+			this.label11.TabIndex = 8;
+			this.label11.Text = "Server Type";
 			// 
 			// label6
 			// 
@@ -140,12 +163,12 @@ namespace helicon
 			this.label7.Name = "label7";
 			this.label7.Size = new System.Drawing.Size(342, 28);
 			this.label7.TabIndex = 12;
-			this.label7.Text = "The tool requires connection to an SQL and an SMTP Server, please specify the det" +
-			"ails of your connections below.";
+			this.label7.Text = "The tool needs credentials to connect to a SQL and SMTP (optional) server, please" +
+			" specify the details below.";
 			// 
 			// button1
 			// 
-			this.button1.Location = new System.Drawing.Point(178, 391);
+			this.button1.Location = new System.Drawing.Point(178, 443);
 			this.button1.Name = "button1";
 			this.button1.Size = new System.Drawing.Size(85, 23);
 			this.button1.TabIndex = 11;
@@ -155,7 +178,7 @@ namespace helicon
 			// 
 			// button2
 			// 
-			this.button2.Location = new System.Drawing.Point(269, 391);
+			this.button2.Location = new System.Drawing.Point(269, 443);
 			this.button2.Name = "button2";
 			this.button2.Size = new System.Drawing.Size(85, 23);
 			this.button2.TabIndex = 12;
@@ -176,12 +199,12 @@ namespace helicon
 			this.groupBox1.Controls.Add(this.label3);
 			this.groupBox1.Controls.Add(this.label4);
 			this.groupBox1.Controls.Add(this.txSmtpPass);
-			this.groupBox1.Location = new System.Drawing.Point(12, 216);
+			this.groupBox1.Location = new System.Drawing.Point(12, 250);
 			this.groupBox1.Name = "groupBox1";
 			this.groupBox1.Size = new System.Drawing.Size(342, 164);
 			this.groupBox1.TabIndex = 11;
 			this.groupBox1.TabStop = false;
-			this.groupBox1.Text = "SMTP Server Configuration";
+			this.groupBox1.Text = "SMTP Credentials";
 			// 
 			// txSmtpFromName
 			// 
@@ -269,7 +292,7 @@ namespace helicon
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-			this.ClientSize = new System.Drawing.Size(366, 421);
+			this.ClientSize = new System.Drawing.Size(366, 478);
 			this.Controls.Add(this.button2);
 			this.Controls.Add(this.button1);
 			this.Controls.Add(this.label7);
@@ -287,6 +310,8 @@ namespace helicon
 			this.groupBox1.PerformLayout();
 			this.ResumeLayout(false);
 		}
+		private System.Windows.Forms.Label label11;
+		private System.Windows.Forms.ComboBox txSqlType;
 		private System.Windows.Forms.TextBox txSmtpFromName;
 		private System.Windows.Forms.TextBox txSmtpPass;
 		private System.Windows.Forms.TextBox txSmtpUser;

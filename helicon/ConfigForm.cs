@@ -22,6 +22,7 @@ namespace helicon
 			txSqlUsername.Text = config.get("sqlUsername");
 			txSqlPassword.Text = config.get("sqlPassword");
 			txSqlDatabase.Text = config.get("sqlDatabase");
+			txSqlType.Text = config.get("sqlType"); 
 
 			txSmtpServer.Text = config.get("smtpHost");
 			txSmtpPort.Text = config.get("smtpPort");
@@ -37,6 +38,7 @@ namespace helicon
 			config.put("sqlUsername", txSqlUsername.Text);
 			config.put("sqlPassword", txSqlPassword.Text);
 			config.put("sqlDatabase", txSqlDatabase.Text);
+			config.put("sqlType", txSqlType.Text);
 
 			config.put("smtpHost", txSmtpServer.Text);
 			config.put("smtpPort", txSmtpPort.Text);
