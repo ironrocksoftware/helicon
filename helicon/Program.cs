@@ -54,7 +54,7 @@ namespace helicon
 		private static System.Threading.Mutex mutex = null;
 		private static FileInfo processFileInfo;
 
-		private static string VERSION_NAME = "2.1.5";
+		private static string VERSION_NAME = "2.1.6";
 
 		/* *********************************************************** */
 		private static int VERSION;
@@ -1965,16 +1965,15 @@ namespace helicon
 					foreach (Dictionary<string,object> row in result)
 					{
 						List<Dictionary<string,object>> tmp = new List<Dictionary<string, object>> ();
-						
+
 						foreach (string key in row.Keys)
 						{
 							Dictionary<string,object> x = new Dictionary<string, object> ();
-
 							x.Add("Key", key);
 							x.Add("Value", row[key]);
 							tmp.Add(x);
 						}
-						
+
 						Dictionary<string,object> y = new Dictionary<string, object> ();
 						y.Add("Row", tmp);
 						temp.Add(y);
@@ -1996,7 +1995,7 @@ namespace helicon
 						temp.Add(x);
 					}
 
-					CONTEXT[FmtAttr(node, "Into", "Keys")] = temp;
+					CONTEXT[FmtAttr(node, "Into", "Array") + "_Keys"] = temp;
 				}
 			}
 			catch (Exception e)
