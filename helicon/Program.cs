@@ -1248,6 +1248,7 @@ namespace helicon
 					case "CallSubroutine":
 					case "Call":
 					case "ApiCall":
+					case "HttpPost":
 					case "Pop3LoadArray":
 					case "ImapLoadArray":
 					case "ImapOpen":
@@ -1334,6 +1335,7 @@ namespace helicon
 					case "CallSubroutine":			CallSubroutine(node); continue;
 					case "Call":					Call(node); continue;
 					case "ApiCall":					ApiCall(node); continue;
+					case "HttpPost":				HttpPost(node); continue;
 
 					case "Pop3LoadArray":			Pop3LoadArray(node); continue;
 					case "ImapLoadArray":			ImapLoadArray(node); continue;
@@ -2341,6 +2343,48 @@ namespace helicon
 
 			string tmp;
 			CONTEXT[prefix + "raw"] = tmp = Api.executeRequestJson(url, method, response == "JSON");
+			CONTEXT[prefix + "rawBytes"] = Encoding.GetEncoding(1252).GetBytes(tmp);
+
+			if (response == "JSON")
+			{
+				JsonElement elem = Api.jsonResponse;
+
+				if (elem.type == JsonElementType.OBJECT)
+				{
+					foreach (string keyName in elem.getKeys())
+						CONTEXT[prefix + keyName] = elem[keyName].ToValue();
+				}
+
+				CONTEXT[prefix + "DATA"] = JsonToVars(elem, debug);
+			}
+		}
+
+		// *****************************************************
+		private static void HttpPost (XmlElement node)
+		{
+			if (!NodeCheck(node)) return;
+
+			string url = FmtAttr(node, "Url", "");
+			if (url == "") return;
+
+			string prefix = FmtAttr(node, "Prefix", "Api");
+			if (!prefix.EndsWith(".")) prefix += ".";
+
+			string response = FmtAttr(node, "ResponseType", "JSON").ToUpper();
+			if (response!="RAW" && response!="JSON") response = "JSON";
+
+			string contentType = FmtAttr(node, "ContentType", "application/octet-stream").ToLower();
+			byte[] data = GetByteArray(FmtInnerTextObj(node, ""));
+
+			bool debug = GetBool(FmtAttr(node, "Debug", "false"));
+
+			Api.clearRequest();
+
+			if (GetBool(FmtAttr(node, "ClearCookies", "false")))
+				Api.clearCookies();
+
+			string tmp;
+			CONTEXT[prefix + "raw"] = tmp = Api.postData(url, contentType, data, response == "JSON");
 			CONTEXT[prefix + "rawBytes"] = Encoding.GetEncoding(1252).GetBytes(tmp);
 
 			if (response == "JSON")

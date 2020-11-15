@@ -230,6 +230,58 @@ namespace helicon
 			return result;
 		}
 
+		/// <summary>
+		/// Executes a body post and interprets the JSON response.
+		/// </summary>
+		public static string postData (string url, string contentType, byte[] data, bool decodeJson)
+		{
+			string result = "";
+
+			System.Net.ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | SecurityProtocolType.Tls13;
+
+			try {
+				WebClient netClient = new WebClient();
+
+				netClient.Headers.Add(HttpRequestHeader.UserAgent, "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:64.0) Gecko/20100101 Firefox/64.0");
+
+				string cookieHeader = "";
+
+				foreach (string cookieName in cookies.AllKeys) {
+					cookieHeader += cookieName + "=" + cookies[cookieName] + "; ";
+				}
+
+				if (cookieHeader.Length > 0)
+					netClient.Headers["Cookie"] = cookieHeader;
+
+				netClient.Headers["Content-Type"] = contentType;
+				result = System.Text.Encoding.UTF8.GetString(netClient.UploadData(url, data));
+
+				WebHeaderCollection h = netClient.ResponseHeaders;
+
+				for (int i = 0; i < h.Count; i++)
+				{
+					string hdr = h.GetKey(i);
+					if (hdr.ToLower() != "set-cookie") continue;
+
+					foreach (string value in h.GetValues(hdr))
+					{
+						string[] t0 = value.Split(';');
+						string[] t1 = t0[0].Split('=');
+
+						cookies.Set(t1[0].Trim(), t1[1].Trim());
+					}
+				}
+			}
+			catch (Exception e) {
+				errstr = e.Message + "\n" + result;
+			}
+
+			if (decodeJson)
+				jsonResponse = JsonElement.fromString(result);
+
+			return result;
+		}
+
 	}
 
 };
