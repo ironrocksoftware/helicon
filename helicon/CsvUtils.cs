@@ -117,8 +117,12 @@ namespace helicon
 					{
 						for (int j = 0; j < cols2.Length; j++)
 						{
-							if (cols2[j].StartsWith("\"")) cols2[j] = cols2[j].Substring(1);
-							if (cols2[j].EndsWith("\"")) cols2[j] = cols2[j].Substring(0, cols2[j].Length-1);
+							if (cols2[j].StartsWith("\""))
+							{
+								cols2[j] = cols2[j].Substring(1);
+								cols2[j] = cols2[j].Substring(0, cols2[j].Length-1);
+								cols2[j] = cols2[j].Replace("\"\"", "\"");
+							}
 						}
 					}
 
@@ -158,8 +162,12 @@ namespace helicon
 					{
 						for (int j = 0; j < cols2.Length; j++)
 						{
-							if (cols2[j].StartsWith("\"")) cols2[j] = cols2[j].Substring(1);
-							if (cols2[j].EndsWith("\"")) cols2[j] = cols2[j].Substring(0, cols2[j].Length-1);
+							if (cols2[j].StartsWith("\""))
+							{
+								cols2[j] = cols2[j].Substring(1);
+								cols2[j] = cols2[j].Substring(0, cols2[j].Length-1);
+								cols2[j] = cols2[j].Replace("\"\"", "\"");
+							}
 						}
 					}
 
@@ -232,8 +240,12 @@ namespace helicon
 					{
 						for (int j = 0; j < cols2.Length; j++)
 						{
-							if (cols2[j].StartsWith("\"")) cols2[j] = cols2[j].Substring(1);
-							if (cols2[j].EndsWith("\"")) cols2[j] = cols2[j].Substring(0, cols2[j].Length-1);
+							if (cols2[j].StartsWith("\""))
+							{
+								cols2[j] = cols2[j].Substring(1);
+								cols2[j] = cols2[j].Substring(0, cols2[j].Length-1);
+								cols2[j] = cols2[j].Replace("\"\"", "\"");
+							}
 						}
 					}
 
@@ -267,8 +279,12 @@ namespace helicon
 					{
 						for (int j = 0; j < cols2.Length; j++)
 						{
-							if (cols2[j].StartsWith("\"")) cols2[j] = cols2[j].Substring(1);
-							if (cols2[j].EndsWith("\"")) cols2[j] = cols2[j].Substring(0, cols2[j].Length-1);
+							if (cols2[j].StartsWith("\""))
+							{
+								cols2[j] = cols2[j].Substring(1);
+								cols2[j] = cols2[j].Substring(0, cols2[j].Length-1);
+								cols2[j] = cols2[j].Replace("\"\"", "\"");
+							}
 						}
 					}
 

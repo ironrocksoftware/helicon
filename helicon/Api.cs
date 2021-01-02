@@ -107,6 +107,7 @@ namespace helicon
 		public static string executeRequest(string url, string method, bool decodeXml)
 		{
 			string result = "";
+			errstr = "";
 
 			System.Net.ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | SecurityProtocolType.Tls13;
 			multipartQuery += "--" + multipartBoundary + "--\r\n\r\n";
@@ -127,7 +128,9 @@ namespace helicon
 
 				if (method == "get")
 				{
-					result = netClient.DownloadString(url + (url.IndexOf("?") != -1 ? "&" : "?") + (query != "" ? query.Substring(1) : ""));
+					string tmp = url + (url.IndexOf("?") != -1 ? "&" : "?") + (query != "" ? query.Substring(1) : "");
+					if (tmp.EndsWith("&")) tmp = tmp.Substring(0, tmp.Length-1);
+					result = netClient.DownloadString(tmp);
 				}
 				else
 				{
@@ -173,9 +176,10 @@ namespace helicon
 		/// Executes an API call with the parameters specified in the current request query and returns
 		/// the response string.
 		/// </summary>
-		public static string executeRequestJson(string url, string method, bool decodeJson)
+		public static string executeRequestJson(string url, string method, string auth, bool decodeJson)
 		{
 			string result = "";
+			errstr = "";
 
 			System.Net.ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | SecurityProtocolType.Tls13;
 			multipartQuery += "--" + multipartBoundary + "--\r\n\r\n";
@@ -194,9 +198,14 @@ namespace helicon
 				if (cookieHeader.Length > 0)
 					netClient.Headers["Cookie"] = cookieHeader;
 				
+				if (auth != null)
+					netClient.Headers["Authorization"] = "Basic " + System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(auth));
+
 				if (method == "get")
 				{
-					result = netClient.DownloadString(url + (url.IndexOf("?") != -1 ? "&" : "?") + (query != "" ? query.Substring(1) : ""));
+					string tmp = url + (url.IndexOf("?") != -1 ? "&" : "?") + (query != "" ? query.Substring(1) : "");
+					if (tmp.EndsWith("&")) tmp = tmp.Substring(0, tmp.Length-1);
+					result = netClient.DownloadString(tmp);
 				}
 				else
 				{
@@ -222,10 +231,18 @@ namespace helicon
 			}
 			catch (Exception e) {
 				errstr = e.Message + "\n" + result;
+				result = "";
 			}
 
 			if (decodeJson)
-				jsonResponse = JsonElement.fromString(result);
+			{
+				try {
+					jsonResponse = JsonElement.fromString(result);
+				}
+				catch (Exception e) {
+					jsonResponse = JsonElement.fromString("{\"error\":\"Unable to parse JSON data.\"}");
+				}
+			}
 
 			return result;
 		}
@@ -233,9 +250,10 @@ namespace helicon
 		/// <summary>
 		/// Executes a body post and interprets the JSON response.
 		/// </summary>
-		public static string postData (string url, string contentType, byte[] data, bool decodeJson)
+		public static string postData (string url, string contentType, byte[] data, string auth, bool decodeJson)
 		{
 			string result = "";
+			errstr = "";
 
 			System.Net.ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | SecurityProtocolType.Tls13;
 
@@ -243,6 +261,7 @@ namespace helicon
 				WebClient netClient = new WebClient();
 
 				netClient.Headers.Add(HttpRequestHeader.UserAgent, "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:64.0) Gecko/20100101 Firefox/64.0");
+				netClient.Headers.Add("Accept", "application/json");
 
 				string cookieHeader = "";
 
@@ -254,6 +273,10 @@ namespace helicon
 					netClient.Headers["Cookie"] = cookieHeader;
 
 				netClient.Headers["Content-Type"] = contentType;
+
+				if (auth != null)
+					netClient.Headers["Authorization"] = "Basic " + System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(auth));
+
 				result = System.Text.Encoding.UTF8.GetString(netClient.UploadData(url, data));
 
 				WebHeaderCollection h = netClient.ResponseHeaders;
@@ -274,10 +297,18 @@ namespace helicon
 			}
 			catch (Exception e) {
 				errstr = e.Message + "\n" + result;
+				result = "";
 			}
 
 			if (decodeJson)
-				jsonResponse = JsonElement.fromString(result);
+			{
+				try {
+					jsonResponse = JsonElement.fromString(result);
+				}
+				catch (Exception e) {
+					jsonResponse = JsonElement.fromString("{\"error\":\"Unable to parse JSON data.\"}");
+				}
+			}
 
 			return result;
 		}

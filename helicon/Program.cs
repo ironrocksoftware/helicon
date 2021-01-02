@@ -54,7 +54,7 @@ namespace helicon
 		private static System.Threading.Mutex mutex = null;
 		private static FileInfo processFileInfo;
 
-		private static string VERSION_NAME = "2.1.6";
+		private static string VERSION_NAME = "2.1.9";
 
 		/* *********************************************************** */
 		private static int VERSION;
@@ -225,10 +225,18 @@ namespace helicon
 			
 			int tmp_i;
 
-			switch (val[0])
+			switch (val[0].ToUpper())
 			{
 				case "HEXSTR":
 					result = GetHexString(GetByteArray(ContextGet(val[1])));
+					break;
+
+				case "TOBASE64":
+					result = System.Convert.ToBase64String(GetByteArray(ContextGet(val[1])));
+					break;
+
+				case "FROMBASE64":
+					result = System.Text.Encoding.UTF8.GetString(System.Convert.FromBase64String(Convert.ToString(ContextGet(val[1]))));
 					break;
 
 				case "ESCAPE":
@@ -241,6 +249,10 @@ namespace helicon
 
 				case "INT":
 					result = GetInt(ContextGet(val[1]));
+					break;
+
+				case "CHR":
+					result = ((char)GetInt(val[1])).ToString();
 					break;
 
 				case "FLOAT":
@@ -1220,10 +1232,12 @@ namespace helicon
 					case "SqlLoadRow":
 					case "SqlLoadArray":
 					case "CsvLoadArray":
+					case "FlattenData":
 						continue;
 
 					case "ForEachFile":
 					case "ForEachRow":
+					case "ForEachIndex":
 					case "ForRange":
 						errors += ValidateActions (node);
 						continue;
@@ -1232,6 +1246,10 @@ namespace helicon
 						errors += ValidateActions ((XmlElement)node.SelectSingleNode("True"));
 						errors += ValidateActions ((XmlElement)node.SelectSingleNode("False"));
 						errors += ValidateActions ((XmlElement)node.SelectSingleNode("Error"));
+						continue;
+
+					case "Block":
+						errors += ValidateActions (node);
 						continue;
 
 					case "SafeBlock":
@@ -1247,8 +1265,9 @@ namespace helicon
 
 					case "CallSubroutine":
 					case "Call":
+					case "JsonLoad":
 					case "ApiCall":
-					case "HttpPost":
+					case "Post":
 					case "Pop3LoadArray":
 					case "ImapLoadArray":
 					case "ImapOpen":
@@ -1260,6 +1279,7 @@ namespace helicon
 					case "PdfLoadInfo":
 					case "PdfLoadTextArray":
 					case "PdfMerge":
+					case "PdfStamp":
 					case "IFilterLoadText":
 					case "PdfLoadText":
 					case "RegexExtract":
@@ -1324,18 +1344,22 @@ namespace helicon
 					case "SqlLoadRow":				SqlLoadRow(node); continue;
 					case "SqlLoadArray":			SqlLoadArray(node); continue;
 					case "CsvLoadArray":			CsvLoadArray(node); continue;
+					case "FlattenData":				FlattenData(node); continue;
 
 					case "ForEachFile":				ForEachFile(node); continue;
 					case "ForEachRow":				ForEachRow(node); continue;
+					case "ForEachIndex":			ForEachIndex(node); continue;
 					case "ForRange":				ForRange(node); continue;
 					case "If":						If(node); continue;
 
 					case "SafeBlock":				SafeBlock(node); continue;
+					case "Block":					Block(node); continue;
 					case "Subroutine":				continue;
 					case "CallSubroutine":			CallSubroutine(node); continue;
 					case "Call":					Call(node); continue;
+					case "JsonLoad":				JsonLoad(node); continue;
 					case "ApiCall":					ApiCall(node); continue;
-					case "HttpPost":				HttpPost(node); continue;
+					case "Post":					Post(node); continue;
 
 					case "Pop3LoadArray":			Pop3LoadArray(node); continue;
 					case "ImapLoadArray":			ImapLoadArray(node); continue;
@@ -1348,6 +1372,7 @@ namespace helicon
 					case "PdfLoadInfo":				PdfLoadInfo(node); continue;
 					case "PdfLoadTextArray":		PdfLoadTextArray(node); continue;
 					case "PdfMerge":				PdfMerge(node); continue;
+					case "PdfStamp":				PdfStamp(node); continue;
 					case "IFilterLoadText":			IFilterLoadText(node); continue;
 					case "PdfLoadText":				PdfLoadText(node); continue;
 					case "RegexExtract":			RegexExtract(node); continue;
@@ -2044,6 +2069,70 @@ namespace helicon
 		}
 
 		// *****************************************************
+		private static void FlattenData (XmlElement node)
+		{
+			if (!NodeCheck(node)) return;
+
+			string prefix = FmtAttr(node, "Prefix", "");
+			if (!String.IsNullOrEmpty(prefix)) prefix += ".";
+
+			List<Dictionary<string, object>> list;
+
+			try {
+				list = (List<Dictionary<string, object>>)CONTEXT[FmtAttr(node, "From", "Array")];
+				if (list == null) throw new Exception ("Input array "+FmtAttr(node, "From", "Array")+" is null.");
+			}
+			catch (Exception e) {
+				throw new Exception ("FlattenData: Unable to get Array: " + e.Message);
+			}
+
+			try
+			{
+				List<Dictionary<string, object>> temp = new List<Dictionary<string, object>> ();
+
+				foreach (Dictionary<string,object> row in list)
+				{
+					List<Dictionary<string,object>> tmp = new List<Dictionary<string, object>> ();
+
+					foreach (string key in row.Keys)
+					{
+						Dictionary<string,object> x = new Dictionary<string, object> ();
+						x.Add("Key", key);
+						x.Add("Value", row[key]);
+						tmp.Add(x);
+					}
+
+					Dictionary<string,object> y = new Dictionary<string, object> ();
+					y.Add("Row", tmp);
+					temp.Add(y);
+				}
+
+				CONTEXT[FmtAttr(node, "Into", "Array")] = temp;
+
+				if (list.Count != 0)
+				{
+					List<Dictionary<string, object>> temp2 = new List<Dictionary<string, object>> ();
+
+					foreach (string key in list[0].Keys)
+					{
+						Dictionary<string, object> x = new Dictionary<string, object> ();
+						x.Add("Key", key);
+						temp2.Add(x);
+					}
+
+					CONTEXT[FmtAttr(node, "Into", "Array") + "_Keys"] = temp2;
+				}
+			}
+			catch (Exception e)
+			{
+				if (!GetBool(FmtAttr(node, "Silent", "FALSE")))
+					throw new Exception ("FlattenData: " + e.Message);
+
+				LOG.write ("Error: FlattenData: " + e.Message);
+			}
+		}
+
+		// *****************************************************
 		private static void ForEachRow (XmlElement node)
 		{
 			if (!NodeCheck(node)) return;
@@ -2099,6 +2188,94 @@ namespace helicon
 		}
 
 		// *****************************************************
+		private static void ForEachIndex (XmlElement node)
+		{
+			if (!NodeCheck(node)) return;
+
+			string varName = FmtAttr(node, "VarName", "X");
+			List<object> listA = null;
+			List<Dictionary<string, object>> listB = null;
+
+			try {
+				listA = (List<object>)CONTEXT[FmtAttr(node, "In", "Array")];
+				if (listA == null) throw new Exception ("Input array "+FmtAttr(node, "In", "Array")+" is null.");
+			}
+			catch (InvalidCastException e)
+			{
+				listB = (List<Dictionary<string, object>>)CONTEXT[FmtAttr(node, "In", "Array")];
+				if (listB == null) throw new Exception ("Input array "+FmtAttr(node, "In", "Array")+" is null.");
+			}
+			catch (Exception e) {
+				throw new Exception ("ForEachIndex: Unable to get Array: " + e.Message);
+			}
+
+			if (listA != null)
+			{
+				foreach (object field in listA)
+				{
+					if (field == null)
+						continue;
+
+					CONTEXT[varName] = field;
+
+				Repeat:
+					try {
+						ExecuteActions(node);
+					}
+					catch (StopException e) {
+						break;
+					}
+					catch (SkipException e) {
+						continue;
+					}
+					catch (RepeatException e) {
+						goto Repeat;
+					}
+					catch (Exception e) {
+						
+						if (!GetBool(FmtAttr(node, "Silent", "FALSE")))
+							throw new Exception ("ForEachIndex: " + e.Message);
+
+						LOG.write ("Error: ForEachIndex: " + e.Message);
+					}
+				}
+			}
+			else if (listB != null)
+			{
+				foreach (object field in listB)
+				{
+					if (field == null)
+						continue;
+
+					CONTEXT[varName] = field;
+
+				Repeat:
+					try {
+						ExecuteActions(node);
+					}
+					catch (StopException e) {
+						break;
+					}
+					catch (SkipException e) {
+						continue;
+					}
+					catch (RepeatException e) {
+						goto Repeat;
+					}
+					catch (Exception e) {
+						
+						if (!GetBool(FmtAttr(node, "Silent", "FALSE")))
+							throw new Exception ("ForEachIndex: " + e.Message);
+
+						LOG.write ("Error: ForEachIndex: " + e.Message);
+					}
+				}
+			}
+
+			CONTEXT.Remove(varName);
+		}
+
+		// *****************************************************
 		private static void ForRange (XmlElement node)
 		{
 			if (!NodeCheck(node)) return;
@@ -2107,9 +2284,9 @@ namespace helicon
 			int from = GetInt(FmtAttr(node, "From", "0"));
 			int count = GetInt(FmtAttr(node, "Count", "0"));
 
-			for (int i = from; count != 0; count--, i++)
+			for (; count != 0; count--, from++)
 			{
-				CONTEXT[var] = i.ToString();
+				CONTEXT[var] = from.ToString();
 
 			Repeat:
 				try {
@@ -2129,6 +2306,8 @@ namespace helicon
 					LOG.write ("Stack Trace: " + e.StackTrace, false);
 				}
 			}
+
+			CONTEXT[var] = from.ToString();
 		}
 
 		// *****************************************************
@@ -2241,6 +2420,14 @@ namespace helicon
 		}
 
 		// *****************************************************
+		private static void Block (XmlElement node)
+		{
+			if (!NodeCheck(node)) return;
+
+			ExecuteActions(node);
+		}
+
+		// *****************************************************
 		private static void Subroutine (XmlElement node)
 		{
 			string name = FmtAttr(node, "Name", "");
@@ -2302,6 +2489,18 @@ namespace helicon
 		}
 
 		// *****************************************************
+		private static void JsonLoad (XmlElement node)
+		{
+			if (!NodeCheck(node)) return;
+
+			string prefix = FmtAttr(node, "Prefix", "Json");
+			if (!prefix.EndsWith(".")) prefix += ".";
+
+			JsonElement elem = JsonElement.fromString(FmtInnerText(node, ""));
+			CONTEXT[prefix+"DATA"] = JsonToVars(elem, false);
+		}
+
+		// *****************************************************
 		private static void ApiCall (XmlElement node)
 		{
 			if (!NodeCheck(node)) return;
@@ -2318,6 +2517,9 @@ namespace helicon
 			string method = FmtAttr(node, "Method", "post").ToLower();
 			if (method!="get" && method!="post") method = "post";
 
+			string auth = FmtAttr(node, "Auth", "").Trim();
+			if (auth == "") auth = null;
+
 			bool debug = GetBool(FmtAttr(node, "Debug", "false"));
 
 			Api.clearRequest();
@@ -2331,18 +2533,23 @@ namespace helicon
 				{
 					string fromFile = FmtAttr(field, "FromFile", "");
 					string filename = FmtAttr(field, "Filename", "");
+					string fieldName = FmtAttr(field, "Field", "");
+
+					if (fieldName == "")
+						fieldName = field.Name;
 
 					if (fromFile != "")
-						Api.addRequestFile (field.Name, filename != "" ? filename : new FileInfo(fromFile).Name, File.ReadAllBytes(fromFile));
+						Api.addRequestFile (fieldName, filename != "" ? filename : new FileInfo(fromFile).Name, File.ReadAllBytes(fromFile));
 					else if (filename != "")
-						Api.addRequestFile (field.Name, filename, System.Text.Encoding.UTF8.GetBytes(FmtInnerText(field, "")));
+						Api.addRequestFile (fieldName, filename, GetByteArray(FmtInnerTextObj(field, "")));
 					else
-						Api.addRequestField(field.Name, FmtInnerText(field, ""));
+						Api.addRequestField(fieldName, FmtInnerText(field, ""));
 				}
 			}
 
 			string tmp;
-			CONTEXT[prefix + "raw"] = tmp = Api.executeRequestJson(url, method, response == "JSON");
+			CONTEXT[prefix + "raw"] = tmp = Api.executeRequestJson(url, method, auth, response == "JSON");
+			CONTEXT[prefix + "error"] = Api.errstr;
 			CONTEXT[prefix + "rawBytes"] = Encoding.GetEncoding(1252).GetBytes(tmp);
 
 			if (response == "JSON")
@@ -2360,7 +2567,7 @@ namespace helicon
 		}
 
 		// *****************************************************
-		private static void HttpPost (XmlElement node)
+		private static void Post (XmlElement node)
 		{
 			if (!NodeCheck(node)) return;
 
@@ -2376,6 +2583,9 @@ namespace helicon
 			string contentType = FmtAttr(node, "ContentType", "application/octet-stream").ToLower();
 			byte[] data = GetByteArray(FmtInnerTextObj(node, ""));
 
+			string auth = FmtAttr(node, "Auth", "").Trim();
+			if (auth == "") auth = null;
+
 			bool debug = GetBool(FmtAttr(node, "Debug", "false"));
 
 			Api.clearRequest();
@@ -2384,7 +2594,7 @@ namespace helicon
 				Api.clearCookies();
 
 			string tmp;
-			CONTEXT[prefix + "raw"] = tmp = Api.postData(url, contentType, data, response == "JSON");
+			CONTEXT[prefix + "raw"] = tmp = Api.postData(url, contentType, data, auth, response == "JSON");
 			CONTEXT[prefix + "rawBytes"] = Encoding.GetEncoding(1252).GetBytes(tmp);
 
 			if (response == "JSON")
@@ -3349,6 +3559,48 @@ namespace helicon
 				if (File.Exists(outputFile)) File.Delete(outputFile);
 
 				PdfUtils.MergePDFs (outputFile, inputFiles);
+			}
+			catch (Exception e)
+			{
+				if (strict) throw new Exception ("PdfMerge("+outputFile+"): " + e.Message);
+			}
+		}
+
+		// *****************************************************
+		private static void PdfStamp (XmlElement node)
+		{
+			if (!NodeCheck(node)) return;
+
+			bool strict = GetBool(FmtAttr(node, "Strict", "FALSE"));
+
+			string outputFile = FmtAttr(node, "Output", "");
+			if (outputFile.Length == 0)
+			{
+				if (strict) throw new Exception ("PdfStamp(): No output file specified.");
+				return;
+			}
+
+			string inputFile = FmtAttr(node, "Input", "");
+			if (inputFile.Length == 0)
+			{
+				if (strict) throw new Exception ("PdfStamp(): No input file specified.");
+				return;
+			}
+
+			int pageNum = GetInt(FmtAttr(node, "PageNum", "1"));
+			int margin = GetInt(FmtAttr(node, "Margin", "16"));
+			int padding = GetInt(FmtAttr(node, "Padding", "4"));
+			float fontSize = (float)GetDouble(FmtAttr(node, "FontSize", "14"));
+
+			string X = FmtAttr(node, "X", "Right");
+			string Y = FmtAttr(node, "Y", "Top");
+
+			try
+			{
+				if (File.Exists(outputFile))
+					File.Delete(outputFile);
+
+				PdfUtils.StampPDF(inputFile, outputFile, pageNum, margin, padding, X, Y, fontSize, FmtInnerText(node, ""));
 			}
 			catch (Exception e)
 			{
