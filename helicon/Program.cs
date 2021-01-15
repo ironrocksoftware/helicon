@@ -54,7 +54,7 @@ namespace helicon
 		private static System.Threading.Mutex mutex = null;
 		private static FileInfo processFileInfo;
 
-		private static string VERSION_NAME = "2.1.9";
+		private static string VERSION_NAME = "2.1.10";
 
 		/* *********************************************************** */
 		private static int VERSION;
@@ -1811,8 +1811,9 @@ namespace helicon
 			if (SQL != null) SQL.close();
 
 			int timeout = GetInt(FmtAttr(node, "Timeout", "300"));
+			int dataTimeout = GetInt(FmtAttr(node, "DataTimeout", "300"));
 
-			SQL = new SQLWrapper (config, timeout);
+			SQL = new SQLWrapper (config, timeout, dataTimeout);
 
 			if (!SQL.open())
 				throw new Exception ("SqlOpen: Unable to connect to SQL database server.");
