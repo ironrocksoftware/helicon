@@ -70,6 +70,9 @@
     <Reference Include="itext.barcodes">
       <HintPath>..\dependencies\iText7\itext.barcodes.dll</HintPath>
     </Reference>
+    <Reference Include="itext.cleanup">
+      <HintPath>..\dependencies\iTextPdfSweep\itext.cleanup.dll</HintPath>
+    </Reference>
     <Reference Include="itext.forms">
       <HintPath>..\dependencies\iText7\itext.forms.dll</HintPath>
     </Reference>

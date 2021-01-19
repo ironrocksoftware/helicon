@@ -6,7 +6,6 @@ using System.Text;
 using System.Text.RegularExpressions;
 using IronRockUtils;
 using System.Linq;
-
 using iText.Kernel.Geom;
 using iText.Kernel.Pdf;
 using iText.Kernel.Utils;
@@ -14,10 +13,11 @@ using iText.Kernel.Font;
 using iText.Layout;
 using iText.Kernel.Pdf.Annot;
 using iText.Kernel.Pdf.Canvas;
-
 using iText.Kernel.Pdf.Canvas.Parser;
 using iText.Kernel.Pdf.Canvas.Parser.Data;
 using iText.Kernel.Pdf.Canvas.Parser.Listener;
+using iText.PdfCleanup;
+using iText.PdfCleanup.Autosweep;
 
 namespace helicon
 {
@@ -510,6 +510,16 @@ namespace helicon
 			}
 
 			return list;
+		}
+
+		public static void Remove (PdfDocument pdf, int pageNum, float x, float y, float width, float height)
+		{
+			PdfPage page = pdf.GetPage(pageNum);
+
+			List<PdfCleanUpLocation> cleanUpLocations = new List<PdfCleanUpLocation> ();
+			cleanUpLocations.Add(new PdfCleanUpLocation(pageNum, new Rectangle(x, y, width, height)));
+			PdfCleanUpTool cleaner = new PdfCleanUpTool(pdf, cleanUpLocations);
+			cleaner.CleanUp();
 		}
 
 		public static void Overlay (PdfDocument pdf, int pageNum, float x, float y, float width, float height, float fontSize, string background, string foreground, string text)

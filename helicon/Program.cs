@@ -1299,6 +1299,7 @@ namespace helicon
 					case "PdfClose":
 					case "PdfFind":
 					case "PdfOverlay":
+					case "PdfCleanup":
 					case "IFilterLoadText":
 					case "PdfLoadText":
 					case "RegexExtract":
@@ -1396,6 +1397,7 @@ namespace helicon
 					case "PdfClose":				PdfClose(node); continue;
 					case "PdfFind":					PdfFind(node); continue;
 					case "PdfOverlay":				PdfOverlay(node); continue;
+					case "PdfCleanup":				PdfCleanup(node); continue;
 					case "IFilterLoadText":			IFilterLoadText(node); continue;
 					case "PdfLoadText":				PdfLoadText(node); continue;
 					case "RegexExtract":			RegexExtract(node); continue;
@@ -3710,6 +3712,31 @@ namespace helicon
 			catch (Exception e)
 			{
 				throw new Exception ("PdfOverlay: " + e.Message);
+			}
+		}
+
+		// *****************************************************
+		private static void PdfCleanup (XmlElement node)
+		{
+			if (!NodeCheck(node)) return;
+
+			int pageNum = GetInt(FmtAttr(node, "Page", ContextGet("Page").ToString()));
+			float x = (float)GetDouble(FmtAttr(node, "X", ContextGet("X").ToString()));
+			float y = (float)GetDouble(FmtAttr(node, "Y", ContextGet("Y").ToString()));			
+			float width = (float)GetDouble(FmtAttr(node, "Width", ContextGet("Width").ToString()));
+			float height = (float)GetDouble(FmtAttr(node, "Height", ContextGet("Height").ToString()));
+			string bg = FmtAttr(node, "Background", "ffffff");
+
+			try
+			{
+				PdfUtils.Remove(
+					(PdfDocument)CONTEXT["PdfDocument"],
+					pageNum, x, y, width, height
+				);
+			}
+			catch (Exception e)
+			{
+				throw new Exception ("PdfCleanup: " + e.Message);
 			}
 		}
 
