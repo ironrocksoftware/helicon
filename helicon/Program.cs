@@ -54,7 +54,7 @@ namespace helicon
 		private static System.Threading.Mutex mutex = null;
 		private static FileInfo processFileInfo;
 
-		private static string VERSION_NAME = "2.1.10";
+		private static string VERSION_NAME = "2.1.11";
 
 		/* *********************************************************** */
 		private static int VERSION;
@@ -505,6 +505,21 @@ namespace helicon
 					}
 
 					result = ((DateTime)result).Add(new TimeSpan(tmp_i, 0, 0, 0)).ToString("yyyy-MM-dd");
+					break;
+
+				case "DATETIME_FORMAT":
+					// DATETIME_FORMAT <FORMAT>
+					// DATETIME_YEAR <DATE> <FORMAT>
+					if (val.Length == 2) {
+						result = DateTime.Now;
+						result = ((DateTime)result).ToString(val[1]);
+					}
+					else {
+						val[1] = Convert.ToString(ContextGet(val[1]));
+						result = DateTime.ParseExact(val[1].ToString(), new string[] { "MM/dd/yyyy HH:mm:ss", "yyyy-MM-dd HH:mm:ss", "MM/dd/yyyy", "yyyy-MM-dd" }, null, System.Globalization.DateTimeStyles.None);
+						result = ((DateTime)result).ToString(val[2]);
+					}
+
 					break;
 
 				default:
@@ -1280,6 +1295,10 @@ namespace helicon
 					case "PdfLoadTextArray":
 					case "PdfMerge":
 					case "PdfStamp":
+					case "PdfOpen":
+					case "PdfClose":
+					case "PdfFind":
+					case "PdfOverlay":
 					case "IFilterLoadText":
 					case "PdfLoadText":
 					case "RegexExtract":
@@ -1373,6 +1392,10 @@ namespace helicon
 					case "PdfLoadTextArray":		PdfLoadTextArray(node); continue;
 					case "PdfMerge":				PdfMerge(node); continue;
 					case "PdfStamp":				PdfStamp(node); continue;
+					case "PdfOpen":					PdfOpen(node); continue;
+					case "PdfClose":				PdfClose(node); continue;
+					case "PdfFind":					PdfFind(node); continue;
+					case "PdfOverlay":				PdfOverlay(node); continue;
 					case "IFilterLoadText":			IFilterLoadText(node); continue;
 					case "PdfLoadText":				PdfLoadText(node); continue;
 					case "RegexExtract":			RegexExtract(node); continue;
@@ -3495,7 +3518,7 @@ namespace helicon
 		{
 			if (!NodeCheck(node)) return;
 
-			bool strict = GetBool(FmtAttr(node, "Strict", "FALSE"));
+			bool strict = GetBool(FmtAttr(node, "Strict", "TRUE"));
 
 			string path = FmtAttr(node, "Path", "");
 			if (path.Length == 0)
@@ -3526,7 +3549,7 @@ namespace helicon
 		{
 			if (!NodeCheck(node)) return;
 
-			bool strict = GetBool(FmtAttr(node, "Strict", "FALSE"));
+			bool strict = GetBool(FmtAttr(node, "Strict", "TRUE"));
 
 			string outputFile = FmtAttr(node, "Output", "");
 			if (outputFile.Length == 0)
@@ -3572,7 +3595,7 @@ namespace helicon
 		{
 			if (!NodeCheck(node)) return;
 
-			bool strict = GetBool(FmtAttr(node, "Strict", "FALSE"));
+			bool strict = GetBool(FmtAttr(node, "Strict", "TRUE"));
 
 			string outputFile = FmtAttr(node, "Output", "");
 			if (outputFile.Length == 0)
@@ -3606,6 +3629,87 @@ namespace helicon
 			catch (Exception e)
 			{
 				if (strict) throw new Exception ("PdfMerge("+outputFile+"): " + e.Message);
+			}
+		}
+
+		// *****************************************************
+		private static void PdfOpen (XmlElement node)
+		{
+			if (!NodeCheck(node)) return;
+
+			string outputFile = FmtAttr(node, "Output", null);
+
+			string inputFile = FmtAttr(node, "Input", "");
+			if (inputFile.Length == 0)
+			{
+				throw new Exception ("PdfOpen(): No input file specified.");
+				return;
+			}
+
+			try
+			{
+				CONTEXT["PdfDocument"] = PdfUtils.OpenPDF(inputFile, outputFile);
+			}
+			catch (Exception e) {
+				throw new Exception ("PdfOpen("+outputFile+"): " + e.Message);
+			}
+		}
+
+		// *****************************************************
+		private static void PdfClose (XmlElement node)
+		{
+			if (!NodeCheck(node)) return;
+
+			try {
+				PdfUtils.ClosePDF((PdfDocument)CONTEXT["PdfDocument"]);
+			}
+			catch (Exception e) {
+				throw new Exception ("PdfClose: " + e.Message);
+			}
+		}
+
+		// *****************************************************
+		private static void PdfFind (XmlElement node)
+		{
+			if (!NodeCheck(node)) return;
+
+			try {
+				CONTEXT[ FmtAttr(node, "Into", "PdfMatches") ] = PdfUtils.FindMatches (
+					(PdfDocument)CONTEXT["PdfDocument"],
+					FmtInnerText(node, "").Trim(),
+					GetInt(FmtAttr(node, "StartPage", "0")),
+					GetInt(FmtAttr(node, "MaxPages", "0")),
+					GetInt(FmtAttr(node, "MaxCount", "0")));
+			}
+			catch (Exception e) {
+				throw new Exception ("PdfFind: " + e.Message);
+			}
+		}
+
+		// *****************************************************
+		private static void PdfOverlay (XmlElement node)
+		{
+			if (!NodeCheck(node)) return;
+
+			int pageNum = GetInt(FmtAttr(node, "Page", ContextGet("Page").ToString()));
+			float x = (float)GetDouble(FmtAttr(node, "X", ContextGet("X").ToString()));
+			float y = (float)GetDouble(FmtAttr(node, "Y", ContextGet("Y").ToString()));			
+			float width = (float)GetDouble(FmtAttr(node, "Width", ContextGet("Width").ToString()));
+			float height = (float)GetDouble(FmtAttr(node, "Height", ContextGet("Height").ToString()));
+			float fontSize = (float)GetDouble(FmtAttr(node, "FontSize", ContextGet("FontSize").ToString()));
+			string bg = FmtAttr(node, "Background", "ffffff");
+			string fg = FmtAttr(node, "Color", "000000");
+
+			try
+			{
+				PdfUtils.Overlay(
+					(PdfDocument)CONTEXT["PdfDocument"],
+					pageNum, x, y, width, height, fontSize, bg, fg, FmtInnerText(node, "")
+				);
+			}
+			catch (Exception e)
+			{
+				throw new Exception ("PdfOverlay: " + e.Message);
 			}
 		}
 
