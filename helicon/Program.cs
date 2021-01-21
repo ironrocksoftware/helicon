@@ -54,7 +54,7 @@ namespace helicon
 		private static System.Threading.Mutex mutex = null;
 		private static FileInfo processFileInfo;
 
-		private static string VERSION_NAME = "2.1.11";
+		private static string VERSION_NAME = "2.1.12";
 
 		/* *********************************************************** */
 		private static int VERSION;
@@ -1680,17 +1680,21 @@ namespace helicon
 			string dest = FmtAttr(node, "Dest", "");
 			if (dest.Length == 0) return;
 
-			if (!File.Exists(src))
-				return;
-
 			FileInfo fi = new FileInfo(dest);
 
 			try
 			{
+				if (!File.Exists(src))
+					throw new Exception("Source file " + src + " does not exist, or access is denied.");
+
 				if (!File.Exists(fi.DirectoryName))
 					Directory.CreateDirectory(fi.DirectoryName);
 
-				File.Copy(src, fi.DirectoryName + "\\" + (fi.Name == "" ? new FileInfo(src).Name : fi.Name), true);
+				dest = fi.DirectoryName + "\\" + (fi.Name == "" ? new FileInfo(src).Name : fi.Name);
+				File.Copy(src, dest, true);
+
+				if (!File.Exists(dest))
+					throw new Exception("Destination file " + dest + " does not exist. Copy failed.");
 			}
 			catch (Exception e)
 			{
@@ -1709,13 +1713,13 @@ namespace helicon
 			string dest = FmtAttr(node, "Dest", "");
 			if (dest.Length == 0) return;
 
-			if (!File.Exists(src))
-				return;
-
 			FileInfo fi = new FileInfo(dest);
 
 			try
 			{
+				if (!File.Exists(src))
+					throw new Exception("Source file " + src + " does not exist, or access is denied.");
+
 				if (!File.Exists(fi.DirectoryName))
 					Directory.CreateDirectory(fi.DirectoryName);
 
@@ -1725,6 +1729,12 @@ namespace helicon
 					File.Delete(dst);
 
 				File.Move(src, dst);
+
+				if (!File.Exists(dst))
+					throw new Exception("Destination file " + dest + " does not exist. Move failed.");
+
+				if (File.Exists(src))
+					throw new Exception("Source file " + src + " still exists. Move failed.");
 			}
 			catch (Exception e)
 			{
