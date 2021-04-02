@@ -54,7 +54,7 @@ namespace helicon
 		private static System.Threading.Mutex mutex = null;
 		private static FileInfo processFileInfo;
 
-		private static string VERSION_NAME = "2.1.12";
+		private static string VERSION_NAME = "2.1.15";
 
 		/* *********************************************************** */
 		private static int VERSION;
@@ -65,6 +65,7 @@ namespace helicon
 		private static Dictionary<string, object> CONTEXT = null;
 
 		private static ImapClient g_imap_client = null;
+		private static Random random = new Random((int)DateTime.Now.Ticks); 
 
 		/* *********************************************************** */
 		public static int VersionInt (string value)
@@ -126,7 +127,7 @@ namespace helicon
 		}
 
 		private static int ii;
-		
+
 		private static bool IsDigit(string s)
 		{
 			switch (s)
@@ -222,7 +223,7 @@ namespace helicon
 
 			Regex regex;
 			MatchCollection matches;
-			
+
 			int tmp_i;
 
 			switch (val[0].ToUpper())
@@ -283,6 +284,20 @@ namespace helicon
 					result = (DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond).ToString();
 					break;
 
+				case "RAND":
+					result = random.Next().ToString();
+
+					if (val.Length == 2)
+					{
+						tmp_i = int.Parse(Convert.ToString(val[1]));
+						while (((string)result).Length < tmp_i)
+							result = (string)result + random.Next().ToString();
+
+						result = ((string)result).Substring(0, tmp_i);
+					}
+
+					break;
+
 				case "UUID":
 					result = Guid.NewGuid().ToString();
 					break;
@@ -308,7 +323,7 @@ namespace helicon
 
 				case "REGEX_MATCH_CS":
 					regex = new Regex(GetUtf8String(GetByteArray(ContextGet(val[1]))), RegexOptions.ECMAScript);
-					
+
 					string[] tmp1 = GetUtf8String(GetByteArray(ContextGet(val[2]))).Split('\n');
 
 					result = "0";
@@ -659,7 +674,7 @@ namespace helicon
 
 			if (s == "1" || s.ToUpper() == "TRUE")
 				return true;
-			
+
 			if (GetInt(value) > 0)
 				return true;
 
@@ -720,7 +735,7 @@ namespace helicon
 			MethodInfo mi = t.GetMethod("EvalCode");
 
 			object s = mi.Invoke(o, null);
-			
+
 			try { return (bool)s == true; } catch (Exception) { }
 			try { return (int)s != 0; } catch (Exception) { }
 */
@@ -748,6 +763,17 @@ namespace helicon
 				offs++;
 
 				while (offs < expr.Length && expr[offs] != '"')
+					token += expr[offs++];
+
+				offs++;
+
+				token = Format(token).ToString();
+			}
+			else if (expr[offs] == '\'')
+			{
+				offs++;
+
+				while (offs < expr.Length && expr[offs] != '\'')
 					token += expr[offs++];
 
 				offs++;
@@ -936,7 +962,7 @@ namespace helicon
 						s1 = XEvalExpr().ToString();
 						res = s1.Length;
 						break;
-						
+
 					case "CHRCOUNT":
 						s1 = XEvalExpr().ToString();
 						s2 = XEvalExpr().ToString();
@@ -952,7 +978,7 @@ namespace helicon
 
 				while (offs < expr.Length && expr[offs] != ')')
 					offs++;
-				
+
 				if (offs >= expr.Length)
 					throw new Exception("Possibly malformed condition, missing ')'.");
 
@@ -1017,7 +1043,7 @@ namespace helicon
 			return s;*/
 			return null;
 		}
-		
+
 		private static void EnableAnsiConsole()
 		{
 			var h = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -1148,7 +1174,7 @@ namespace helicon
 			if (reEntry == false)
 			{
 				CONTEXT = new Dictionary<string, object> ();
-	
+
 				CONTEXT["TAB"] = "\t";
 				CONTEXT["SP"] = " ";
 				CONTEXT["NL"] = "\n";
@@ -1239,6 +1265,9 @@ namespace helicon
 					case "FileDownload":
 					case "DirCreate":
 					case "DirDelete":
+					case "DirCopy":
+					case "DirMove":
+					case "DirInfo":
 						continue;
 
 					case "SqlOpen":
@@ -1251,6 +1280,7 @@ namespace helicon
 						continue;
 
 					case "ForEachFile":
+					case "ForEachDir":
 					case "ForEachRow":
 					case "ForEachIndex":
 					case "ForRange":
@@ -1275,7 +1305,7 @@ namespace helicon
 
 					case "Subroutine":
 						errors += ValidateActions (node);
-						Subroutine(node); 
+						Subroutine(node);
 						continue;
 
 					case "CallSubroutine":
@@ -1294,6 +1324,7 @@ namespace helicon
 					case "PdfLoadInfo":
 					case "PdfLoadTextArray":
 					case "PdfMerge":
+					case "PdfSlice":
 					case "PdfStamp":
 					case "PdfOpen":
 					case "PdfClose":
@@ -1357,6 +1388,9 @@ namespace helicon
 					case "FileDownload":			FileDownload(node); continue;
 					case "DirCreate":				DirCreate(node); continue;
 					case "DirDelete":				DirDelete(node); continue;
+					case "DirCopy":					DirCopy(node); continue;
+					case "DirMove":					DirMove(node); continue;
+					case "DirInfo":					DirInfo(node); continue;
 
 					case "SqlOpen":					SqlOpen(node); continue;
 					case "SqlClose":				SqlClose(node); continue;
@@ -1367,6 +1401,7 @@ namespace helicon
 					case "FlattenData":				FlattenData(node); continue;
 
 					case "ForEachFile":				ForEachFile(node); continue;
+					case "ForEachDir":				ForEachDir(node); continue;
 					case "ForEachRow":				ForEachRow(node); continue;
 					case "ForEachIndex":			ForEachIndex(node); continue;
 					case "ForRange":				ForRange(node); continue;
@@ -1392,6 +1427,7 @@ namespace helicon
 					case "PdfLoadInfo":				PdfLoadInfo(node); continue;
 					case "PdfLoadTextArray":		PdfLoadTextArray(node); continue;
 					case "PdfMerge":				PdfMerge(node); continue;
+					case "PdfSlice":				PdfSlice(node); continue;
 					case "PdfStamp":				PdfStamp(node); continue;
 					case "PdfOpen":					PdfOpen(node); continue;
 					case "PdfClose":				PdfClose(node); continue;
@@ -1459,7 +1495,7 @@ namespace helicon
 				else
 					Console.WriteLine (FmtInnerText (node, ""));
 			}
-			catch (Exception e) 
+			catch (Exception e)
 			{
 				throw new Exception ("Echo: " + e.Message);
 			}
@@ -1838,6 +1874,114 @@ namespace helicon
 			}
 		}
 
+		private static void DirectoryCopy(string sourceDirName, string destDirName, bool copySubDirs)
+		{
+			DirectoryInfo dir = new DirectoryInfo(sourceDirName);
+			if (!dir.Exists) throw new DirectoryNotFoundException("Source directory does not exist or could not be found: " + sourceDirName);
+
+			DirectoryInfo[] dirs = dir.GetDirectories();
+
+			Directory.CreateDirectory(destDirName);
+
+			FileInfo[] files = dir.GetFiles();
+			foreach (FileInfo file in files)
+			{
+				string tempPath = System.IO.Path.Combine(destDirName, file.Name);
+				file.CopyTo(tempPath, false);
+			}
+
+			if (copySubDirs)
+			{
+				foreach (DirectoryInfo subdir in dirs)
+				{
+					string tempPath = System.IO.Path.Combine(destDirName, subdir.Name);
+					DirectoryCopy(subdir.FullName, tempPath, copySubDirs);
+				}
+			}
+		}
+
+		// *****************************************************
+		private static void DirCopy (XmlElement node)
+		{
+			if (!NodeCheck(node)) return;
+
+			string src = FmtAttr(node, "Src", "");
+			if (src.Length == 0) return;
+
+			string dest = FmtAttr(node, "Dest", "");
+			if (dest.Length == 0) return;
+
+			try
+			{
+				if (!Directory.Exists(src))
+					throw new Exception("Source dir " + src + " does not exist, or access is denied.");
+
+				if (!Directory.Exists(dest))
+					Directory.CreateDirectory(dest);
+
+				DirectoryCopy (src, dest, GetBool(FmtAttr(node, "Recursive", "FALSE")));
+			}
+			catch (Exception e)
+			{
+				throw new Exception ("DirCopy(" + src + "): " + e.Message);
+			}
+		}
+
+		// *****************************************************
+		private static void DirMove (XmlElement node)
+		{
+			if (!NodeCheck(node)) return;
+
+			string src = FmtAttr(node, "Src", "");
+			if (src.Length == 0) return;
+
+			string dest = FmtAttr(node, "Dest", "");
+			if (dest.Length == 0) return;
+
+			try
+			{
+				if (!Directory.Exists(src))
+					throw new Exception("Source dir " + src + " does not exist, or access is denied.");
+
+				if (Directory.Exists(dest))
+					Directory.Delete(dest, true);
+
+				Directory.CreateDirectory((new DirectoryInfo(dest)).Parent.Name);
+
+				Directory.Move(src, dest);
+			}
+			catch (Exception e)
+			{
+				throw new Exception ("DirMove(" + src + " => " + dest + "): " + e.Message);
+			}
+		}
+
+		// *****************************************************
+		private static void DirInfo (XmlElement node)
+		{
+			if (!NodeCheck(node)) return;
+
+			string src = FmtAttr(node, "Path", "");
+			if (src.Length == 0) return;
+
+			CONTEXT["Dir.Name"] = "";
+			CONTEXT["Dir.Exists"] = 0;
+			CONTEXT["Dir.FullPath"] = "";
+			CONTEXT["Dir.FileCount"] = 0;
+			CONTEXT["Dir.DirCount"] = 0;
+
+			if (Directory.Exists(src))
+			{
+				DirectoryInfo i = new DirectoryInfo(src);
+
+				CONTEXT["Dir.Name"] = i.Name;
+				CONTEXT["Dir.Exists"] = i.Exists ? 1 : 0;
+				CONTEXT["Dir.FullPath"] = i.FullName;
+				CONTEXT["Dir.FileCount"] = i.GetFiles().Length;
+				CONTEXT["Dir.DirCount"] = i.GetDirectories().Length;
+			}
+		}
+
 		// *****************************************************
 		private static void SqlOpen (XmlElement node)
 		{
@@ -1932,6 +2076,59 @@ namespace helicon
 			CONTEXT.Remove("File.Path");
 			CONTEXT.Remove("File.Size");
 			CONTEXT.Remove("File.FullPath");
+		}
+
+		// *****************************************************
+		private static void ForEachDir (XmlElement node)
+		{
+			if (!NodeCheck(node)) return;
+
+			bool includeHidden = GetBool(FmtAttr(node, "IncludeHidden", "FALSE"));
+			bool recursive = GetBool(FmtAttr(node, "Recursive", "FALSE"));
+			string path = FmtAttr(node, "InDirectory", ".");
+
+			DirectoryInfo[] dirs;
+
+			try {
+				dirs = new DirectoryInfo (path).GetDirectories("*.*", recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly);
+			}
+			catch (Exception e) {
+				throw new Exception ("ForEachDir("+path+"): " + e.Message);
+			}
+
+			foreach (DirectoryInfo dir in dirs)
+			{
+				if (!includeHidden && (dir.Attributes & FileAttributes.Hidden) != 0)
+					continue;
+
+				CONTEXT["Dir.Name"] = dir.Name;
+				CONTEXT["Dir.FullPath"] = dir.FullName;
+				CONTEXT["Dir.FileCount"] = dir.GetFiles().Length;
+				CONTEXT["Dir.DirCount"] = dir.GetDirectories().Length;
+
+			Repeat:
+				try {
+					ExecuteActions(node);
+				}
+				catch (StopException e) {
+					break;
+				}
+				catch (SkipException e) {
+					continue;
+				}
+				catch (RepeatException e) {
+					goto Repeat;
+				}
+				catch (Exception e)
+				{
+					LOG.write ("Error: ForEachDir("+dir.Name+"): " + e.Message);
+				}
+			}
+
+			CONTEXT.Remove("Dir.Name");
+			CONTEXT.Remove("Dir.FullPath");
+			CONTEXT.Remove("Dir.FileCount");
+			CONTEXT.Remove("Dir.DirCount");
 		}
 
 		// *****************************************************
@@ -2089,7 +2286,7 @@ namespace helicon
 
 			if (!File.Exists(path))
 			{
-				if (strict) throw new Exception ("CsvLoadArray(): Input file does not exist.");
+				if (strict) throw new Exception ("CsvLoadArray(): Input dir does not exist.");
 				return;
 			}
 
@@ -2208,7 +2405,7 @@ namespace helicon
 					goto Repeat;
 				}
 				catch (Exception e) {
-					
+
 					if (!GetBool(FmtAttr(node, "Silent", "FALSE")))
 						throw new Exception ("ForEachRow: " + e.Message);
 
@@ -2268,7 +2465,7 @@ namespace helicon
 						goto Repeat;
 					}
 					catch (Exception e) {
-						
+
 						if (!GetBool(FmtAttr(node, "Silent", "FALSE")))
 							throw new Exception ("ForEachIndex: " + e.Message);
 
@@ -2299,7 +2496,7 @@ namespace helicon
 						goto Repeat;
 					}
 					catch (Exception e) {
-						
+
 						if (!GetBool(FmtAttr(node, "Silent", "FALSE")))
 							throw new Exception ("ForEachIndex: " + e.Message);
 
@@ -2475,6 +2672,8 @@ namespace helicon
 		// *****************************************************
 		private static void CallSubroutine (XmlElement node)
 		{
+			if (!NodeCheck(node)) return;
+
 			string name = FmtAttr(node, "Name", "");
 			if (name == "") return;
 
@@ -2507,7 +2706,7 @@ namespace helicon
 
 				if (!File.Exists(name))
 					name = processFileInfo.DirectoryName + "\\" + name;
-				
+
 				if (!File.Exists(name))
 					throw new Exception ("File '" + name + "' was not found. Unable to execute it.");
 
@@ -2847,7 +3046,7 @@ namespace helicon
 								to_addr += ";" + m.To[j].Address;
 
 							to_addr = to_addr.Length != 0 ? to_addr.Substring(1) : "";
-	
+
 							string str_attachments = "";
 
 							o.Add("MSG_ID", msgid.ToString());
@@ -2884,7 +3083,7 @@ namespace helicon
 							o.Add("MSG_ATTACHMENT_NAMES", str_attachments);
 
 							string tmp = "";
-	
+
 							if (m.Body.HasText)
 							{
 								tmp = m.Body.Text;
@@ -2893,7 +3092,7 @@ namespace helicon
 							{
 								HtmlAgilityPack.HtmlDocument doc = new HtmlAgilityPack.HtmlDocument ();
 								doc.LoadHtml(m.Body.Html);
-	
+
 								try {
 									foreach (var i in doc.DocumentNode.SelectNodes("//style"))
 										i.Remove();
@@ -2905,11 +3104,11 @@ namespace helicon
 									tmp = doc.DocumentNode.InnerText;
 								}
 								catch (Exception e) {
-									tmp = m.Body.Text; 
+									tmp = m.Body.Text;
 								}
-								
+
 							}
-	
+
 							try {
 								tmp = HtmlAgilityPack.HtmlEntity.DeEntitize(tmp);
 							}
@@ -3037,7 +3236,7 @@ namespace helicon
 					client.Connect(host, port, use_ssl, false);
 					client.Login(username, password);
 				}
-				
+
 				long msgid = long.Parse(FmtAttr(node, "Id", "0"));
 
 				ImapX.Message m = new ImapX.Message (msgid, client, client.Folders.Inbox);
@@ -3166,9 +3365,9 @@ namespace helicon
 							tmp = doc.DocumentNode.InnerText;
 						}
 						catch (Exception e) {
-							tmp = m.Body.Text; 
+							tmp = m.Body.Text;
 						}
-						
+
 					}
 
 					try {
@@ -3264,7 +3463,7 @@ namespace helicon
 					tmp = doc.DocumentNode.InnerText;
 				}
 				catch (Exception e) {
-					tmp = msg.TextBody ?? ""; 
+					tmp = msg.TextBody ?? "";
 				}
 			}
 
@@ -3283,7 +3482,7 @@ namespace helicon
 
 			string path = FmtAttr(node, "Path", "");
 			byte[] buffer = GetByteArray(FmtInnerTextObj(node, ""));
-			
+
 			if (path != "" && File.Exists(path))
 				buffer = File.ReadAllBytes(path);
 
@@ -3490,7 +3689,7 @@ namespace helicon
 			{
 				if (strict)
 					throw new Exception ("PdfLoadText("+path+"): File not found.");
-				
+
 				CONTEXT[FmtAttr(node, "Into", "Array")] = new List<Dictionary<string, object>> ();
 				return;
 			}
@@ -3509,7 +3708,7 @@ namespace helicon
 
 		            var o = new Dictionary<string, object> ();
 		            result.Add(o);
-            
+
 		            o.Add("PageNumber", page.ToString());
 		            o.Add("PageText", text);
 				}
@@ -3599,6 +3798,80 @@ namespace helicon
 			catch (Exception e)
 			{
 				if (strict) throw new Exception ("PdfMerge("+outputFile+"): " + e.Message);
+			}
+		}
+
+		// *****************************************************
+		private static void PdfSlice (XmlElement node)
+		{
+			if (!NodeCheck(node)) return;
+
+			bool strict = GetBool(FmtAttr(node, "Strict", "TRUE"));
+
+			string outputFile = FmtAttr(node, "Output", "");
+			if (outputFile.Length == 0)
+			{
+				if (strict) throw new Exception ("PdfSlice(): No output file specified.");
+				return;
+			}
+
+			string inputFile = FmtAttr(node, "Input", "");
+			if (inputFile.Length == 0)
+			{
+				if (strict) throw new Exception ("PdfSlice(): No input file specified.");
+				return;
+			}
+
+			if (!File.Exists(inputFile))
+			{
+				if (strict) throw new Exception ("PdfSlice("+inputFile+"): File not found.");
+				return;
+			}
+
+			string range = FmtAttr(node, "Range", "");
+			if (range.Length == 0)
+			{
+				throw new Exception ("PdfSlice(): Range is required.");
+				return;
+			}
+
+			try
+			{
+				FileInfo fi = new FileInfo (outputFile);
+
+				if (!File.Exists(fi.DirectoryName))
+					Directory.CreateDirectory(fi.DirectoryName);
+
+				string[] _range = range.Split(',');
+
+				int[] pageStart = new int[_range.Length];
+				int[] pageEnd = new int[_range.Length];
+
+				for (int i = 0; i < _range.Length; i++)
+				{
+					string[] tmp = _range[i].Split('-');
+					int a = 0, b = 0;
+
+					if (int.TryParse(tmp[0].Trim(), out a))
+					{
+						if (!int.TryParse(tmp[1].Trim(), out b))
+							b = -1;
+					}
+					else
+						a = -1;
+
+					pageStart[i] = a;
+					pageEnd[i] = b;
+				}
+
+				if (File.Exists(outputFile))
+					File.Delete(outputFile);
+
+				PdfUtils.SlicePDF (outputFile, inputFile, pageStart, pageEnd);
+			}
+			catch (Exception e)
+			{
+				if (strict) throw new Exception ("PdfSlice("+outputFile+"): " + e.Message);
 			}
 		}
 
@@ -3705,7 +3978,7 @@ namespace helicon
 
 			int pageNum = GetInt(FmtAttr(node, "Page", ContextGet("Page").ToString()));
 			float x = (float)GetDouble(FmtAttr(node, "X", ContextGet("X").ToString()));
-			float y = (float)GetDouble(FmtAttr(node, "Y", ContextGet("Y").ToString()));			
+			float y = (float)GetDouble(FmtAttr(node, "Y", ContextGet("Y").ToString()));
 			float width = (float)GetDouble(FmtAttr(node, "Width", ContextGet("Width").ToString()));
 			float height = (float)GetDouble(FmtAttr(node, "Height", ContextGet("Height").ToString()));
 			float fontSize = (float)GetDouble(FmtAttr(node, "FontSize", ContextGet("FontSize").ToString()));
@@ -3732,7 +4005,7 @@ namespace helicon
 
 			int pageNum = GetInt(FmtAttr(node, "Page", ContextGet("Page").ToString()));
 			float x = (float)GetDouble(FmtAttr(node, "X", ContextGet("X").ToString()));
-			float y = (float)GetDouble(FmtAttr(node, "Y", ContextGet("Y").ToString()));			
+			float y = (float)GetDouble(FmtAttr(node, "Y", ContextGet("Y").ToString()));
 			float width = (float)GetDouble(FmtAttr(node, "Width", ContextGet("Width").ToString()));
 			float height = (float)GetDouble(FmtAttr(node, "Height", ContextGet("Height").ToString()));
 			string bg = FmtAttr(node, "Background", "ffffff");
@@ -3835,12 +4108,12 @@ namespace helicon
 					for (int i = 0; i < matches.Count; i++)
 					{
 						Dictionary<string,object> row = new Dictionary<string, object> ();
-	
+
 						for (int j = 0; j < matches[i].Groups.Count; j++)
 						{
 							row.Add("REGEX_" + j, matches[i].Groups[j].Value);
 						}
-	
+
 						result.Add(row);
 					}
 
@@ -4101,7 +4374,7 @@ namespace helicon
 						CONTEXT["EML_SUBJECT"] = mm3.Headers["Subject"];
 						CONTEXT["EML_TO"] = mm3.Headers["To"];
 						CONTEXT["EML_FROM"] = mm3.Headers["From"];
-						
+
 						mm3.Headers.Clear();
 						break;
 
@@ -4283,7 +4556,7 @@ namespace helicon
 				LOG.write ("Error: SendMail: " + e.ToString() + ": " + e.Message);
 			}
 		}
-		
+
 		// *****************************************************
 		private static void Sleep (XmlElement node)
 		{
@@ -4294,7 +4567,7 @@ namespace helicon
 
 			System.Threading.Thread.Sleep(amount);
 		}
-		
+
 		// *****************************************************
 		private static void ZipExtract (XmlElement node)
 		{
@@ -4337,7 +4610,7 @@ namespace helicon
 				CONTEXT["ERRSTR"] = e.Message;
 			}
 		}
-	
+
 		// *****************************************************
 		private static void ZipCompress (XmlElement node)
 		{

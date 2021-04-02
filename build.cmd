@@ -16,6 +16,7 @@ if not exist dit (mkdir dist)
 copy /y helicon\bin\Release\*.* dist
 copy /y servx\bin\Release\*.* dist
 
+del dist\*.txt
 del dist\*.xml
 del dist\*.pdb
 

@@ -295,6 +295,34 @@ namespace helicon
 			return HtmlUtils.ConvertHtml(html);
 		}
 
+		public static void SlicePDF (string outputFile, string inputFile, int[] pageStart, int[] pageEnd)
+		{
+			PdfDocument src = new PdfDocument(new PdfReader(inputFile));
+
+			PdfWriter writer = new PdfWriter (new FileStream(outputFile, FileMode.Create));
+			PdfDocument pdfDocument = new PdfDocument (writer);
+			pdfDocument.SetTagged();
+
+			PdfMerger merger = new PdfMerger (pdfDocument);
+
+			int n = Math.Min(pageStart.Length, pageEnd.Length);
+			for (int i = 0; i < n; i++)
+			{
+				if (pageStart[i] < 0 || pageEnd[i] < 0)
+					continue;
+
+				int lastPage = pageEnd[i];
+
+				if (lastPage > src.GetNumberOfPages())
+					lastPage = src.GetNumberOfPages();
+
+				merger.Merge(src, pageStart[i], lastPage);
+			}
+
+			src.Close();
+			pdfDocument.Close();
+		}
+
 		public static void MergePDFs (string outputPath, string[] inputPath)
 		{
 			bool newMode = true;
@@ -317,7 +345,7 @@ namespace helicon
 				foreach (PdfDocument doc in documentList)
 				{
 					merger.Merge(doc, 1, doc.GetNumberOfPages());
-					doc.CopyPagesTo(1, doc.GetNumberOfPages(), pdfDocument);
+					//doc.CopyPagesTo(1, doc.GetNumberOfPages(), pdfDocument);
 					doc.Close();
 				}
 
