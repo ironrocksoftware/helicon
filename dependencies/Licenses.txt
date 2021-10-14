@@ -1,0 +1,11 @@
+BouncyCastle.Crypto => MIT
+CommonLogging => Apache2
+CommonLoggingCore => Apache
+EPocalipse.IFilter => MS-PL
+HAP => MIT
+ImapX => Apache2
+iText7 => GNU Affero General Public License
+iTextPdfSweep => iText License
+MailKit => MIT
+MimeKit => MIT
+OpenPop.NET => PUBLIC-DOMAIN License

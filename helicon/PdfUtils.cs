@@ -376,7 +376,7 @@ namespace helicon
 			}
 		}
 
-		public static void StampPDF (string src, string dest, int pageNum, int margin, int padding, string offsX, string offsY, float fontSize, string text)
+		public static void StampPDF (string src, string dest, int pageNum, int margin, int padding, string offsX, string offsY, float dx, float dy, float fontSize, string text)
         {
 			PdfDocument pdfDoc = new PdfDocument(new PdfReader(src), new PdfWriter(dest));
 
@@ -444,6 +444,9 @@ namespace helicon
 						y = (pageSize.GetTop() + pageSize.GetBottom() + height) / 2;
 						break;
 				}
+
+				x += dx;
+				y += dy;
 
 				canvas = new PdfCanvas(page);
 

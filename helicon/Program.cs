@@ -54,7 +54,7 @@ namespace helicon
 		private static System.Threading.Mutex mutex = null;
 		private static FileInfo processFileInfo;
 
-		private static string VERSION_NAME = "2.1.15";
+		private static string VERSION_NAME = "2.1.18";
 
 		/* *********************************************************** */
 		private static int VERSION;
@@ -170,7 +170,8 @@ namespace helicon
 
 					if (i.StartsWith("#"))
 					{
-						try {
+						try
+						{
 							int i0 = 0;
 
 							if (IsDigit(i.Substring(1,1)))
@@ -194,6 +195,18 @@ namespace helicon
 							LOG.write("Unable to access index: " + i.Substring(1) + " => " + e.Message);
 							value = null;
 						}
+						continue;
+					}
+					else if (i.StartsWith("@"))
+					{
+						try {
+							string ii = ContextGet(i.Substring(1)).ToString();
+							value = ((Dictionary<string,object>)value)[ii];
+						}
+						catch (Exception e) {
+							value = null;
+						}
+
 						continue;
 					}
 
@@ -220,6 +233,7 @@ namespace helicon
 			string[] val = value.Split(' ');
 
 			object result = null;
+			object result2 = null;
 
 			Regex regex;
 			MatchCollection matches;
@@ -249,7 +263,7 @@ namespace helicon
 					break;
 
 				case "INT":
-					result = GetInt(ContextGet(val[1]));
+					result = (int)GetDouble(ContextGet(val[1]));
 					break;
 
 				case "CHR":
@@ -400,6 +414,18 @@ namespace helicon
 						result = ((string)result).Substring(0, ((string)result).LastIndexOf('.'));
 					break;
 
+				case "FILECTIME":
+					result = new FileInfo(ContextGet(val[1]).ToString()).CreationTime.ToString("yyyy-MM-dd HH:mm:ss");
+					break;
+
+				case "FILEMTIME":
+					result = new FileInfo(ContextGet(val[1]).ToString()).LastWriteTime.ToString("yyyy-MM-dd HH:mm:ss");
+					break;
+
+				case "FILEATIME":
+					result = new FileInfo(ContextGet(val[1]).ToString()).LastAccessTime.ToString("yyyy-MM-dd HH:mm:ss");
+					break;
+
 				case "DATETIME":
 				// DATETIME
 				// DATETIME <DATE>
@@ -413,7 +439,7 @@ namespace helicon
 						else
 							val[1] = Convert.ToString(ContextGet(val[1]));
 
-						result = DateTime.ParseExact(val[1].ToString(), new string[] { "MM/dd/yyyy HH:mm:ss", "yyyy-MM-dd HH:mm:ss", "MM/dd/yyyy", "yyyy-MM-dd" }, null, System.Globalization.DateTimeStyles.None);
+						result = DateTime.ParseExact(val[1].ToString(), new string[] { "MM/dd/yyyy HH:mm:ss", "yyyy-MM-dd HH:mm:ss", "MM/dd/yyyy HH:mm", "yyyy-MM-dd HH:mm", "MM/dd/yyyy", "yyyy-MM-dd" }, null, System.Globalization.DateTimeStyles.None);
 					}
 
 					result = ((DateTime)result).ToString("yyyy-MM-dd HH:mm:ss");
@@ -432,7 +458,7 @@ namespace helicon
 						else
 							val[1] = Convert.ToString(ContextGet(val[1]));
 
-						result = DateTime.ParseExact(val[1].ToString(), new string[] { "MM/dd/yyyy HH:mm:ss", "yyyy-MM-dd HH:mm:ss", "MM/dd/yyyy", "yyyy-MM-dd" }, null, System.Globalization.DateTimeStyles.None);
+						result = DateTime.ParseExact(val[1].ToString(), new string[] { "MM/dd/yyyy HH:mm:ss", "yyyy-MM-dd HH:mm:ss", "MM/dd/yyyy HH:mm", "yyyy-MM-dd HH:mm", "MM/dd/yyyy", "yyyy-MM-dd" }, null, System.Globalization.DateTimeStyles.None);
 					}
 
 					result = ((DateTime)result).ToString("yyyy-MM-dd");
@@ -451,7 +477,7 @@ namespace helicon
 						else
 							val[1] = Convert.ToString(ContextGet(val[1]));
 
-						result = DateTime.ParseExact(val[1].ToString(), new string[] { "MM/dd/yyyy HH:mm:ss", "yyyy-MM-dd HH:mm:ss", "MM/dd/yyyy", "yyyy-MM-dd" }, null, System.Globalization.DateTimeStyles.None);
+						result = DateTime.ParseExact(val[1].ToString(), new string[] { "MM/dd/yyyy HH:mm:ss", "yyyy-MM-dd HH:mm:ss", "MM/dd/yyyy HH:mm", "yyyy-MM-dd HH:mm", "MM/dd/yyyy", "yyyy-MM-dd" }, null, System.Globalization.DateTimeStyles.None);
 					}
 
 					result = ((DateTime)result).ToString("yyyy");
@@ -470,7 +496,7 @@ namespace helicon
 						else
 							val[1] = Convert.ToString(ContextGet(val[1]));
 
-						result = DateTime.ParseExact(val[1].ToString(), new string[] { "MM/dd/yyyy HH:mm:ss", "yyyy-MM-dd HH:mm:ss", "MM/dd/yyyy", "yyyy-MM-dd" }, null, System.Globalization.DateTimeStyles.None);
+						result = DateTime.ParseExact(val[1].ToString(), new string[] { "MM/dd/yyyy HH:mm:ss", "yyyy-MM-dd HH:mm:ss", "MM/dd/yyyy HH:mm", "yyyy-MM-dd HH:mm", "MM/dd/yyyy", "yyyy-MM-dd" }, null, System.Globalization.DateTimeStyles.None);
 					}
 
 					result = ((DateTime)result).ToString("MM");
@@ -489,7 +515,7 @@ namespace helicon
 						else
 							val[1] = Convert.ToString(ContextGet(val[1]));
 
-						result = DateTime.ParseExact(val[1].ToString(), new string[] { "MM/dd/yyyy HH:mm:ss", "yyyy-MM-dd HH:mm:ss", "MM/dd/yyyy", "yyyy-MM-dd" }, null, System.Globalization.DateTimeStyles.None);
+						result = DateTime.ParseExact(val[1].ToString(), new string[] { "MM/dd/yyyy HH:mm:ss", "yyyy-MM-dd HH:mm:ss", "MM/dd/yyyy HH:mm", "yyyy-MM-dd HH:mm", "MM/dd/yyyy", "yyyy-MM-dd" }, null, System.Globalization.DateTimeStyles.None);
 					}
 
 					result = ((DateTime)result).ToString("dd");
@@ -516,10 +542,46 @@ namespace helicon
 							tmp_i = int.Parse(Convert.ToString(ContextGet(val[2])));
 						}
 
-						result = DateTime.ParseExact(val[1].ToString(), new string[] { "MM/dd/yyyy HH:mm:ss", "yyyy-MM-dd HH:mm:ss", "MM/dd/yyyy", "yyyy-MM-dd" }, null, System.Globalization.DateTimeStyles.None);
+						result = DateTime.ParseExact(val[1].ToString(), new string[] { "MM/dd/yyyy HH:mm:ss", "yyyy-MM-dd HH:mm:ss", "MM/dd/yyyy HH:mm", "yyyy-MM-dd HH:mm", "MM/dd/yyyy", "yyyy-MM-dd" }, null, System.Globalization.DateTimeStyles.None);
 					}
 
 					result = ((DateTime)result).Add(new TimeSpan(tmp_i, 0, 0, 0)).ToString("yyyy-MM-dd");
+					break;
+
+				case "DATETIME_SPAN_DAYS":
+					// DATETIME_SPAN_DAYS <A> <B>
+
+					result = DateTime.ParseExact(Convert.ToString(ContextGet(val[1])), new string[] { "MM/dd/yyyy HH:mm:ss", "yyyy-MM-dd HH:mm:ss", "MM/dd/yyyy HH:mm", "yyyy-MM-dd HH:mm", "MM/dd/yyyy", "yyyy-MM-dd" }, null, System.Globalization.DateTimeStyles.None);
+					result2 = DateTime.ParseExact(Convert.ToString(ContextGet(val[2])), new string[] { "MM/dd/yyyy HH:mm:ss", "yyyy-MM-dd HH:mm:ss", "MM/dd/yyyy HH:mm", "yyyy-MM-dd HH:mm", "MM/dd/yyyy", "yyyy-MM-dd" }, null, System.Globalization.DateTimeStyles.None);
+
+					result = ((DateTime)result2 - (DateTime)result).TotalDays;
+					break;
+
+				case "DATETIME_SPAN_HOURS":
+					// DATETIME_SPAN_HOURS <A> <B>
+
+					result = DateTime.ParseExact(Convert.ToString(ContextGet(val[1])), new string[] { "MM/dd/yyyy HH:mm:ss", "yyyy-MM-dd HH:mm:ss", "MM/dd/yyyy HH:mm", "yyyy-MM-dd HH:mm", "MM/dd/yyyy", "yyyy-MM-dd" }, null, System.Globalization.DateTimeStyles.None);
+					result2 = DateTime.ParseExact(Convert.ToString(ContextGet(val[2])), new string[] { "MM/dd/yyyy HH:mm:ss", "yyyy-MM-dd HH:mm:ss", "MM/dd/yyyy HH:mm", "yyyy-MM-dd HH:mm", "MM/dd/yyyy", "yyyy-MM-dd" }, null, System.Globalization.DateTimeStyles.None);
+
+					result = ((DateTime)result2 - (DateTime)result).TotalHours;
+					break;
+
+				case "DATETIME_SPAN_MINUTES":
+					// DATETIME_SPAN_MINUTES <A> <B>
+
+					result = DateTime.ParseExact(Convert.ToString(ContextGet(val[1])), new string[] { "MM/dd/yyyy HH:mm:ss", "yyyy-MM-dd HH:mm:ss", "MM/dd/yyyy HH:mm", "yyyy-MM-dd HH:mm", "MM/dd/yyyy", "yyyy-MM-dd" }, null, System.Globalization.DateTimeStyles.None);
+					result2 = DateTime.ParseExact(Convert.ToString(ContextGet(val[2])), new string[] { "MM/dd/yyyy HH:mm:ss", "yyyy-MM-dd HH:mm:ss", "MM/dd/yyyy HH:mm", "yyyy-MM-dd HH:mm", "MM/dd/yyyy", "yyyy-MM-dd" }, null, System.Globalization.DateTimeStyles.None);
+
+					result = ((DateTime)result2 - (DateTime)result).TotalMinutes;
+					break;
+
+				case "DATETIME_SPAN_SECONDS":
+					// DATETIME_SPAN_SECONDS <A> <B>
+
+					result = DateTime.ParseExact(Convert.ToString(ContextGet(val[1])), new string[] { "MM/dd/yyyy HH:mm:ss", "yyyy-MM-dd HH:mm:ss", "MM/dd/yyyy HH:mm", "yyyy-MM-dd HH:mm", "MM/dd/yyyy", "yyyy-MM-dd" }, null, System.Globalization.DateTimeStyles.None);
+					result2 = DateTime.ParseExact(Convert.ToString(ContextGet(val[2])), new string[] { "MM/dd/yyyy HH:mm:ss", "yyyy-MM-dd HH:mm:ss", "MM/dd/yyyy HH:mm", "yyyy-MM-dd HH:mm", "MM/dd/yyyy", "yyyy-MM-dd" }, null, System.Globalization.DateTimeStyles.None);
+
+					result = ((DateTime)result2 - (DateTime)result).TotalSeconds;
 					break;
 
 				case "DATETIME_FORMAT":
@@ -531,7 +593,7 @@ namespace helicon
 					}
 					else {
 						val[1] = Convert.ToString(ContextGet(val[1]));
-						result = DateTime.ParseExact(val[1].ToString(), new string[] { "MM/dd/yyyy HH:mm:ss", "yyyy-MM-dd HH:mm:ss", "MM/dd/yyyy", "yyyy-MM-dd" }, null, System.Globalization.DateTimeStyles.None);
+						result = DateTime.ParseExact(val[1].ToString(), new string[] { "MM/dd/yyyy HH:mm:ss", "yyyy-MM-dd HH:mm:ss", "MM/dd/yyyy HH:mm", "yyyy-MM-dd HH:mm", "MM/dd/yyyy", "yyyy-MM-dd" }, null, System.Globalization.DateTimeStyles.None);
 						result = ((DateTime)result).ToString(val[2]);
 					}
 
@@ -875,6 +937,18 @@ namespace helicon
 						d1 = GetDouble(XEvalExpr());
 						d2 = GetDouble(XEvalExpr());
 						res = d1 > d2 ? "1" : "0";
+						break;
+
+					case "MIN":
+						d1 = GetDouble(XEvalExpr());
+						d2 = GetDouble(XEvalExpr());
+						res = d1 < d2 ? d1 : d2;
+						break;
+
+					case "MAX":
+						d1 = GetDouble(XEvalExpr());
+						d2 = GetDouble(XEvalExpr());
+						res = d1 > d2 ? d1 : d2;
 						break;
 
 					case "OR":
@@ -1283,6 +1357,7 @@ namespace helicon
 					case "ForEachDir":
 					case "ForEachRow":
 					case "ForEachIndex":
+					case "ForEachKey":
 					case "ForRange":
 						errors += ValidateActions (node);
 						continue;
@@ -1404,6 +1479,7 @@ namespace helicon
 					case "ForEachDir":				ForEachDir(node); continue;
 					case "ForEachRow":				ForEachRow(node); continue;
 					case "ForEachIndex":			ForEachIndex(node); continue;
+					case "ForEachKey":				ForEachKey(node); continue;
 					case "ForRange":				ForRange(node); continue;
 					case "If":						If(node); continue;
 
@@ -2505,6 +2581,53 @@ namespace helicon
 				}
 			}
 
+			CONTEXT.Remove(varName);
+		}
+
+		// *****************************************************
+		private static void ForEachKey (XmlElement node)
+		{
+			if (!NodeCheck(node)) return;
+
+			string varName = FmtAttr(node, "VarName", "X");
+			Dictionary<string, object> list = null;
+
+			try {
+				list = (Dictionary<string, object>)CONTEXT[FmtAttr(node, "In", "Array")];
+				if (list == null) throw new Exception ("Input array "+FmtAttr(node, "In", "Array")+" is null.");
+			}
+			catch (Exception e) {
+				throw new Exception ("ForEachKey: Unable to get Array: " + e.Message);
+			}
+
+			foreach (string field in list.Keys)
+			{
+				CONTEXT[varName + ".key"] = field;
+				CONTEXT[varName] = list[field];
+
+			Repeat:
+				try {
+					ExecuteActions(node);
+				}
+				catch (StopException e) {
+					break;
+				}
+				catch (SkipException e) {
+					continue;
+				}
+				catch (RepeatException e) {
+					goto Repeat;
+				}
+				catch (Exception e) {
+
+					if (!GetBool(FmtAttr(node, "Silent", "FALSE")))
+						throw new Exception ("ForEachKey: " + e.Message);
+
+					LOG.write ("Error: ForEachKey: " + e.Message);
+				}
+			}
+
+			CONTEXT.Remove(varName + ".key");
 			CONTEXT.Remove(varName);
 		}
 
@@ -3904,12 +4027,15 @@ namespace helicon
 			string X = FmtAttr(node, "X", "Right");
 			string Y = FmtAttr(node, "Y", "Top");
 
+			float dx = (float)GetDouble(FmtAttr(node, "OffsX", "0"));
+			float dy = (float)GetDouble(FmtAttr(node, "OffsY", "0"));
+
 			try
 			{
 				if (File.Exists(outputFile))
 					File.Delete(outputFile);
 
-				PdfUtils.StampPDF(inputFile, outputFile, pageNum, margin, padding, X, Y, fontSize, FmtInnerText(node, ""));
+				PdfUtils.StampPDF(inputFile, outputFile, pageNum, margin, padding, X, Y, dx, dy, fontSize, FmtInnerText(node, ""));
 			}
 			catch (Exception e)
 			{
