@@ -20,6 +20,7 @@ namespace helicon
 		public static string query;
 		public static string multipartQuery;
 		public static string multipartBoundary;
+		public static bool addedFiles;
 
 		/// <summary>
 		/// Cookie fields obtained from last request.
@@ -47,6 +48,7 @@ namespace helicon
 		public static void clearRequest()
 		{
 			query = "";
+			addedFiles = false;
 			multipartBoundary = "MK8SHF618234JXKXABVHS76SL5L6NSAJS8D6VVA8283AOSD87CKA";
 			multipartQuery = "";
 		}
@@ -76,6 +78,8 @@ namespace helicon
 
 		public static void addRequestFile (String name, String filename, byte[] data)
 		{
+			addedFiles = true;
+
 			multipartQuery += "--" + multipartBoundary + "\r\n";
 			multipartQuery += "Content-Disposition: form-data; name='" + name + "'; filename='" + filename + "'\r\n";
 			multipartQuery += "Content-Type: application/octet-stream\r\n";
@@ -197,9 +201,14 @@ namespace helicon
 
 				if (cookieHeader.Length > 0)
 					netClient.Headers["Cookie"] = cookieHeader;
-				
+
 				if (auth != null)
-					netClient.Headers["Authorization"] = "Basic " + System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(auth));
+				{
+					if (auth.StartsWith("!!*"))
+						netClient.Headers["Authorization"] = auth.Substring(3);
+					else
+						netClient.Headers["Authorization"] = "Basic " + System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(auth));
+				}
 
 				if (method == "get")
 				{
@@ -209,8 +218,16 @@ namespace helicon
 				}
 				else
 				{
-					netClient.Headers["Content-Type"] = "multipart/form-data; boundary=" + multipartBoundary;
-					result = netClient.UploadString(url, multipartQuery);
+					if (addedFiles)
+					{
+						netClient.Headers["Content-Type"] = "multipart/form-data; boundary=" + multipartBoundary;
+						result = netClient.UploadString(url, multipartQuery);
+					}
+					else
+					{
+						netClient.Headers["Content-Type"] = "application/x-www-form-urlencoded";
+						result = netClient.UploadString(url, query);
+					}
 				}
 
 				WebHeaderCollection h = netClient.ResponseHeaders;
@@ -275,7 +292,12 @@ namespace helicon
 				netClient.Headers["Content-Type"] = contentType;
 
 				if (auth != null)
-					netClient.Headers["Authorization"] = "Basic " + System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(auth));
+				{
+					if (auth.StartsWith("!!*"))
+						netClient.Headers["Authorization"] = auth.Substring(3);
+					else
+						netClient.Headers["Authorization"] = "Basic " + System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(auth));
+				}
 
 				result = System.Text.Encoding.UTF8.GetString(netClient.UploadData(url, data));
 

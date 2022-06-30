@@ -54,7 +54,7 @@ namespace helicon
 		private static System.Threading.Mutex mutex = null;
 		private static FileInfo processFileInfo;
 
-		private static string VERSION_NAME = "2.1.18";
+		private static string VERSION_NAME = "2.1.21";
 
 		/* *********************************************************** */
 		private static int VERSION;
@@ -65,7 +65,7 @@ namespace helicon
 		private static Dictionary<string, object> CONTEXT = null;
 
 		private static ImapClient g_imap_client = null;
-		private static Random random = new Random((int)DateTime.Now.Ticks); 
+		private static Random random = new Random((int)(DateTime.Now.Ticks & 0x7FFFFFFF)); 
 
 		/* *********************************************************** */
 		public static int VersionInt (string value)
@@ -124,6 +124,46 @@ namespace helicon
 		private static string Escape (string value)
 		{
 			return "'" + value.Replace("'", "''") + "'";
+		}
+
+		private static string UnEscape (string value)
+		{
+			string val = "";
+			int state = 0;
+
+			for (int i = 0; i < value.Length; i++)
+			{
+				if (state == 0 && value[i] != '\\')
+				{
+					val += value[i];
+					continue;
+				}
+
+				if (state == 0)
+				{
+					state = 1;
+					continue;
+				}
+
+				switch(value[i])
+				{
+					case '0': val += '\0'; break;
+					case 'b': val += '\b'; break;
+					case 't': val += '\t'; break;
+					case 'n': val += '\n'; break;
+					case 'f': val += '\f'; break;
+					case 'v': val += '\v'; break;
+					case 'r': val += '\r'; break;
+					case '\'': val += '\''; break;
+					case '"': val += '"'; break;
+					case '/': val += '/'; break;
+					case '\\': val += '\\'; break;
+				}
+
+				state = 0;
+			}
+
+			return val;
 		}
 
 		private static int ii;
@@ -256,6 +296,10 @@ namespace helicon
 
 				case "ESCAPE":
 					result = Escape(Convert.ToString(ContextGet(val[1])));
+					break;
+
+				case "UNESCAPE":
+					result = UnEscape(Convert.ToString(ContextGet(val[1])));
 					break;
 
 				case "STRING":
@@ -1136,6 +1180,8 @@ namespace helicon
 		{
 			EnableAnsiConsole();
 
+			System.Net.ServicePointManager.SecurityProtocol = System.Net.SecurityProtocolType.Tls12 | System.Net.SecurityProtocolType.Tls13;
+
 			if (args.Length == 1 && args[0] == "-v")
 			{
 				Console.WriteLine("\nhelicon: version " + VERSION_NAME);
@@ -1287,8 +1333,7 @@ namespace helicon
 			// *****************************************************
 			// Execute each action.
 
-			try
-			{
+			try {
 				ExecuteActions (elem);
 			}
 			catch (FalseException e) {
@@ -2878,6 +2923,9 @@ namespace helicon
 			string auth = FmtAttr(node, "Auth", "").Trim();
 			if (auth == "") auth = null;
 
+			string auth2 = FmtAttr(node, "Authorization", "").Trim();
+			if (auth2 != "") auth = "!!*" + auth2;
+
 			bool debug = GetBool(FmtAttr(node, "Debug", "false"));
 
 			Api.clearRequest();
@@ -2887,8 +2935,13 @@ namespace helicon
 
 			if (node.HasChildNodes)
 			{
-				foreach (XmlElement field in node.ChildNodes)
+				foreach (XmlNode xmlnode in node.ChildNodes)
 				{
+					if (xmlnode.NodeType != XmlNodeType.Element)
+						continue;
+
+					XmlElement field = (XmlElement)xmlnode;
+
 					string fromFile = FmtAttr(field, "FromFile", "");
 					string filename = FmtAttr(field, "Filename", "");
 					string fieldName = FmtAttr(field, "Field", "");
@@ -3136,7 +3189,11 @@ namespace helicon
 			{
 				if (!credential_issue)
 				{
-					client.Connect(host, port, use_ssl, false);
+					if (use_ssl)
+						client.Connect(host, port, System.Security.Authentication.SslProtocols.Tls12, false);
+					else
+						client.Connect(host, port, false, false);
+
 					client.Login(username, password);
 				}
 
@@ -3294,7 +3351,11 @@ namespace helicon
 
 			try
 			{
-				g_imap_client.Connect(host, port, use_ssl, false);
+				if (use_ssl)
+					g_imap_client.Connect(host, port, System.Security.Authentication.SslProtocols.Tls12, false);
+				else
+					g_imap_client.Connect(host, port, false, false);
+
 				g_imap_client.Login(username, password);
 			}
 			catch (Exception e)
@@ -3356,7 +3417,11 @@ namespace helicon
 			{
 				if (!credential_issue)
 				{
-					client.Connect(host, port, use_ssl, false);
+					if (use_ssl)
+						client.Connect(host, port, System.Security.Authentication.SslProtocols.Tls12, false);
+					else
+						client.Connect(host, port, false, false);
+
 					client.Login(username, password);
 				}
 
@@ -3407,7 +3472,11 @@ namespace helicon
 			{
 				if (!credential_issue)
 				{
-					client.Connect(host, port, use_ssl, false);
+					if (use_ssl)
+						client.Connect(host, port, System.Security.Authentication.SslProtocols.Tls12, false);
+					else
+						client.Connect(host, port, false, false);
+
 					client.Login(username, password);
 				}
 
@@ -4048,7 +4117,8 @@ namespace helicon
 		{
 			if (!NodeCheck(node)) return;
 
-			string outputFile = FmtAttr(node, "Output", null);
+			string outputFile = FmtAttr(node, "Output", "");
+			if (outputFile == "") outputFile = null;
 
 			string inputFile = FmtAttr(node, "Input", "");
 			if (inputFile.Length == 0)
@@ -4102,17 +4172,17 @@ namespace helicon
 		{
 			if (!NodeCheck(node)) return;
 
-			int pageNum = GetInt(FmtAttr(node, "Page", ContextGet("Page").ToString()));
-			float x = (float)GetDouble(FmtAttr(node, "X", ContextGet("X").ToString()));
-			float y = (float)GetDouble(FmtAttr(node, "Y", ContextGet("Y").ToString()));
-			float width = (float)GetDouble(FmtAttr(node, "Width", ContextGet("Width").ToString()));
-			float height = (float)GetDouble(FmtAttr(node, "Height", ContextGet("Height").ToString()));
-			float fontSize = (float)GetDouble(FmtAttr(node, "FontSize", ContextGet("FontSize").ToString()));
-			string bg = FmtAttr(node, "Background", "ffffff");
-			string fg = FmtAttr(node, "Color", "000000");
-
 			try
 			{
+				int pageNum = GetInt(FmtAttr(node, "Page", ContextGet("Page").ToString()));
+				float x = (float)GetDouble(FmtAttr(node, "X", ContextGet("X").ToString()));
+				float y = (float)GetDouble(FmtAttr(node, "Y", ContextGet("Y").ToString()));
+				float width = (float)GetDouble(FmtAttr(node, "Width", ContextGet("Width").ToString()));
+				float height = (float)GetDouble(FmtAttr(node, "Height", ContextGet("Height").ToString()));
+				float fontSize = (float)GetDouble(FmtAttr(node, "FontSize", ContextGet("FontSize").ToString()));
+				string bg = FmtAttr(node, "Background", "ffffff");
+				string fg = FmtAttr(node, "Color", "000000");
+
 				PdfUtils.Overlay(
 					(PdfDocument)CONTEXT["PdfDocument"],
 					pageNum, x, y, width, height, fontSize, bg, fg, FmtInnerText(node, "")
@@ -4120,6 +4190,7 @@ namespace helicon
 			}
 			catch (Exception e)
 			{
+				LOG.write("StackTrace: " + e.StackTrace);
 				throw new Exception ("PdfOverlay: " + e.Message);
 			}
 		}
@@ -4265,7 +4336,7 @@ namespace helicon
 				List<Dictionary<string, object>> result = new List<Dictionary<string, object>> ();
 				CONTEXT[FmtAttr(node, "Into", "Array")] = result;
 
-				string[] data = FmtInnerText(node, "By").Split(new string[] { FmtAttr(node, "By", "\n", false) }, StringSplitOptions.None);
+				string[] data = FmtInnerText(node, "").Split(new string[] { FmtAttr(node, "By", "\n", false) }, StringSplitOptions.None);
 
 				for (int i = 0; i < data.Length; i++)
 				{
