@@ -54,7 +54,7 @@ namespace helicon
 		private static System.Threading.Mutex mutex = null;
 		private static FileInfo processFileInfo;
 
-		private static string VERSION_NAME = "2.1.21";
+		private static string VERSION_NAME = "2.1.24";
 
 		/* *********************************************************** */
 		private static int VERSION;
@@ -280,7 +280,7 @@ namespace helicon
 
 			int tmp_i;
 
-			switch (val[0].ToUpper())
+			switch (val[0])
 			{
 				case "HEXSTR":
 					result = GetHexString(GetByteArray(ContextGet(val[1])));
@@ -1308,6 +1308,7 @@ namespace helicon
 				CONTEXT["@BLUE"] = "\x1B[94m";
 				CONTEXT["@MAGENTA"] = "\x1B[95m";
 				CONTEXT["@CYAN"] = "\x1B[96m";
+				CONTEXT["@WHITE"] = "\x1B[97m";
 
 				if (args != null)
 				{
@@ -1774,6 +1775,7 @@ namespace helicon
 			}
 			catch (Exception e)
 			{
+				LOG.write ("Stack Trace: " + e.StackTrace, false);
 				throw new Exception ("FileSave(" + path + "): " + e.Message);
 			}
 		}
@@ -3824,6 +3826,8 @@ namespace helicon
 			try
 			{
 				PdfReader pdfReader = new PdfReader(path);
+				pdfReader.SetUnethicalReading(true);
+
 				PdfDocument pdfDoc = new PdfDocument(pdfReader);
 
 				int minWidth = int.MaxValue;
@@ -3833,7 +3837,9 @@ namespace helicon
 
 				for (int page = 1; page <= pdfDoc.GetNumberOfPages(); page++)
 				{
-					Rectangle size = pdfDoc.GetPage(page).GetPageSizeWithRotation();
+					PdfPage pdfPage = pdfDoc.GetPage(page);
+					Rectangle size = pdfPage.GetPageSizeWithRotation();
+					Rectangle size2 = pdfPage.GetPageSize();
 
 					if (size.GetWidth() < minWidth) minWidth = (int)size.GetWidth();
 					if (size.GetHeight() < minHeight) minHeight = (int)size.GetHeight();
@@ -3846,6 +3852,7 @@ namespace helicon
 				CONTEXT[prefix + "PdfMinHeight"] = minHeight / 72.0;
 				CONTEXT[prefix + "PdfMaxWidth"] = maxWidth / 72.0;
 				CONTEXT[prefix + "PdfMaxHeight"] = maxHeight / 72.0;
+
 
 				pdfDoc.Close();
 			}
@@ -3891,6 +3898,8 @@ namespace helicon
 				List<Dictionary<string, object>> result = new List<Dictionary<string, object>> ();
 
 				PdfReader pdfReader = new PdfReader(path);
+				pdfReader.SetUnethicalReading(true);
+
 				PdfDocument pdfDoc = new PdfDocument(pdfReader);
 
 				for (int page = 1; page <= pdfDoc.GetNumberOfPages(); page++)
@@ -4063,6 +4072,7 @@ namespace helicon
 			}
 			catch (Exception e)
 			{
+				LOG.write("StackTrace: " + e.StackTrace);
 				if (strict) throw new Exception ("PdfSlice("+outputFile+"): " + e.Message);
 			}
 		}

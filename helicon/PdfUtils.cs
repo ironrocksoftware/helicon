@@ -297,7 +297,10 @@ namespace helicon
 
 		public static void SlicePDF (string outputFile, string inputFile, int[] pageStart, int[] pageEnd)
 		{
-			PdfDocument src = new PdfDocument(new PdfReader(inputFile));
+			PdfReader pdfReader = new PdfReader(inputFile);
+			pdfReader.SetUnethicalReading(true);
+
+			PdfDocument src = new PdfDocument(pdfReader);
 
 			PdfWriter writer = new PdfWriter (new FileStream(outputFile, FileMode.Create));
 			PdfDocument pdfDocument = new PdfDocument (writer);
@@ -325,22 +328,25 @@ namespace helicon
 
 		public static void MergePDFs (string outputPath, string[] inputPath)
 		{
-			bool newMode = true;
+			List<PdfDocument> documentList = new List<PdfDocument>();
+			PdfWriter writer = null;
+			PdfDocument pdfDocument = null;
+			PdfMerger merger = null;
 
-			if (newMode)
+			try
 			{
-				List<PdfDocument> documentList = new List<PdfDocument>();
-
 				foreach (string inputFile in inputPath)
 				{
-					documentList.Add (new PdfDocument(new PdfReader(inputFile)));
+					PdfReader pdfReader = new PdfReader(inputFile);
+					pdfReader.SetUnethicalReading(true);
+					documentList.Add (new PdfDocument(pdfReader));
 				}
 
-				PdfWriter writer = new PdfWriter (new FileStream(outputPath, FileMode.Create));
-				PdfDocument pdfDocument = new PdfDocument (writer);
+				writer = new PdfWriter (new FileStream(outputPath, FileMode.Create));
+				pdfDocument = new PdfDocument (writer);
 				pdfDocument.SetTagged();
 
-				PdfMerger merger = new PdfMerger (pdfDocument);
+				merger = new PdfMerger (pdfDocument);
 
 				foreach (PdfDocument doc in documentList)
 				{
@@ -351,34 +357,26 @@ namespace helicon
 
 				pdfDocument.Close();
 			}
-			else
+			catch (Exception e)
 			{
-				List<PdfDocument> documentList = new List<PdfDocument>();
-	
-				foreach (string inputFile in inputPath)
-				{
-					documentList.Add (new PdfDocument(new PdfReader(inputFile)));
-				}
+				if (pdfDocument != null)
+					pdfDocument.Close();
 
-				PdfWriter writer = new PdfWriter (new FileStream(outputPath, FileMode.Create));
-				PdfDocument pdfDocument = new PdfDocument (writer);
-				pdfDocument.SetTagged();
-	
-				PdfMerger merger = new PdfMerger (pdfDocument);
-	
 				foreach (PdfDocument doc in documentList)
 				{
-					merger.Merge(doc, 1, doc.GetNumberOfPages());
 					doc.Close();
 				}
-	
-				pdfDocument.Close();
+
+				throw e;
 			}
 		}
 
 		public static void StampPDF (string src, string dest, int pageNum, int margin, int padding, string offsX, string offsY, float dx, float dy, float fontSize, string text)
         {
-			PdfDocument pdfDoc = new PdfDocument(new PdfReader(src), new PdfWriter(dest));
+			PdfReader pdfReader = new PdfReader(src);
+			pdfReader.SetUnethicalReading(true);
+
+			PdfDocument pdfDoc = new PdfDocument(pdfReader, new PdfWriter(dest));
 
 			Rectangle pageSize;
 			PdfCanvas canvas;
@@ -476,12 +474,15 @@ namespace helicon
 
 		public static PdfDocument OpenPDF (string src, string dest=null)
 		{
-			if (dest != null)
-				return new PdfDocument(new PdfReader(src), new PdfWriter(dest));
+			PdfReader pdfReader = new PdfReader(src);
+			pdfReader.SetUnethicalReading(true);
 
-			return new PdfDocument(new PdfReader(src));
+			if (dest != null)
+				return new PdfDocument(pdfReader, new PdfWriter(dest));
+
+			return new PdfDocument(pdfReader);
 		}
-		
+
 		public static void ClosePDF (PdfDocument doc)
 		{
 			doc.Close();
@@ -529,11 +530,13 @@ namespace helicon
 						data["Text"] = m.Value;
 						data["X"] = r.GetLeft();
 						data["Y"] = r.GetBottom();
+						data["X2"] = r.GetRight();
+						data["Y2"] = r.GetTop();
 						data["Width"] = r.GetWidth();
 						data["Height"] = r.GetHeight();
 						data["FontSize"] = x.chars[0].fontSize;
 						data["FontFamily"] = x.chars[0].fontFamily;
-						
+
 						if (count != 0 && data.Count >= count)
 							return list;
 					}
