@@ -14,6 +14,8 @@ namespace helicon
 	/// </summary>
 	public static class Api
 	{
+		public static int responseCode;
+
 		/// <summary>
 		/// Query string built using the addRequestField() method.
 		/// </summary>
@@ -118,8 +120,8 @@ namespace helicon
 
 			try {
 				WebClient netClient = new WebClient();
-				
-				netClient.Headers.Add(HttpRequestHeader.UserAgent, "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:64.0) Gecko/20100101 Firefox/64.0");
+
+				netClient.Headers.Add(HttpRequestHeader.UserAgent, "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:103.0) Gecko/20100101 Firefox/103.0");
 
 				string cookieHeader = "";
 
@@ -191,7 +193,7 @@ namespace helicon
 			try {
 				WebClient netClient = new WebClient();
 
-				netClient.Headers.Add(HttpRequestHeader.UserAgent, "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:64.0) Gecko/20100101 Firefox/64.0");
+				netClient.Headers.Add(HttpRequestHeader.UserAgent, "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:103.0) Gecko/20100101 Firefox/103.0");
 
 				string cookieHeader = "";
 
@@ -226,6 +228,7 @@ namespace helicon
 					else
 					{
 						netClient.Headers["Content-Type"] = "application/x-www-form-urlencoded";
+						if (query.StartsWith("&")) query = query.Substring(1);
 						result = netClient.UploadString(url, query);
 					}
 				}
@@ -277,8 +280,8 @@ namespace helicon
 			try {
 				WebClient netClient = new WebClient();
 
-				netClient.Headers.Add(HttpRequestHeader.UserAgent, "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:64.0) Gecko/20100101 Firefox/64.0");
-				netClient.Headers.Add("Accept", "application/json");
+				netClient.Headers.Add(HttpRequestHeader.UserAgent, "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:103.0) Gecko/20100101 Firefox/103.0");
+				netClient.Headers.Add("Accept", "application/json,application/xhtml+xml,application/xml,*/*");
 
 				string cookieHeader = "";
 
@@ -299,7 +302,7 @@ namespace helicon
 						netClient.Headers["Authorization"] = "Basic " + System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(auth));
 				}
 
-				result = System.Text.Encoding.UTF8.GetString(netClient.UploadData(url, data));
+				result = System.Text.Encoding.UTF8.GetString(netClient.UploadData(url, "POST", data));
 
 				WebHeaderCollection h = netClient.ResponseHeaders;
 
@@ -330,6 +333,99 @@ namespace helicon
 				catch (Exception e) {
 					jsonResponse = JsonElement.fromString("{\"error\":\"Unable to parse JSON data.\"}");
 				}
+			}
+
+			return result;
+		}
+
+		/// <summary>
+		/// Executes an HTTP request.
+		/// </summary>
+		public static string runRequest (string url, string method, string contentType, byte[] data, string auth)
+		{
+			string result = "";
+			errstr = "";
+
+			System.Net.ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | SecurityProtocolType.Tls13;
+			multipartQuery += "--" + multipartBoundary + "--\r\n\r\n";
+			responseCode = 200;
+
+			try {
+				WebClient netClient = new WebClient();
+
+				netClient.Headers.Add(HttpRequestHeader.UserAgent, "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:103.0) Gecko/20100101 Firefox/103.0");
+				netClient.Headers.Add("Accept", "application/json,application/xhtml+xml,application/xml,*/*");
+
+				string cookieHeader = "";
+
+				foreach (string cookieName in cookies.AllKeys) {
+					cookieHeader += cookieName + "=" + cookies[cookieName] + "; ";
+				}
+
+				if (cookieHeader.Length > 0)
+					netClient.Headers["Cookie"] = cookieHeader;
+
+				if (auth != null)
+				{
+					if (auth.ToUpper().StartsWith("RAW:"))
+						netClient.Headers["Authorization"] = auth.Substring(4);
+					else
+						netClient.Headers["Authorization"] = "Basic " + System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(auth));
+				}
+
+				if (method == "GET")
+				{
+					string tmp = url + (url.IndexOf("?") != -1 ? "&" : "?") + (query != "" ? query.Substring(1) : "");
+					if (tmp.EndsWith("&")) tmp = tmp.Substring(0, tmp.Length-1);
+					result = netClient.DownloadString(tmp);
+				}
+				else
+				{
+					if (contentType == "")
+					{
+						if (addedFiles) {
+							netClient.Headers["Content-Type"] = "multipart/form-data; boundary=" + multipartBoundary;
+							result = netClient.UploadString(url, method, multipartQuery);
+						}
+						else {
+							netClient.Headers["Content-Type"] = "application/x-www-form-urlencoded";
+							if (query.StartsWith("&")) query = query.Substring(1);
+							result = netClient.UploadString(url, method, query);
+						}
+					}
+					else
+					{
+						netClient.Headers["Content-Type"] = contentType;
+						result = System.Text.Encoding.UTF8.GetString(netClient.UploadData(url, method, data));
+					}
+				}
+
+				WebHeaderCollection h = netClient.ResponseHeaders;
+
+				for (int i = 0; i < h.Count; i++)
+				{
+					string hdr = h.GetKey(i);
+					if (hdr.ToLower() != "set-cookie") continue;
+
+					foreach (string value in h.GetValues(hdr))
+					{
+						string[] t0 = value.Split(';');
+						string[] t1 = t0[0].Split('=');
+
+						cookies.Set(t1[0].Trim(), t1[1].Trim());
+					}
+				}
+			}
+			catch (WebException we)
+			{
+				HttpWebResponse response = (System.Net.HttpWebResponse)we.Response;
+				responseCode = (int)response.StatusCode;
+				errstr = "Error: " + response.StatusDescription;
+				result = "";
+			}
+			catch (Exception e) {
+				errstr = e.Message + "\n" + result;
+				result = "";
 			}
 
 			return result;

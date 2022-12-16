@@ -488,7 +488,7 @@ namespace helicon
 			doc.Close();
 		}
 
-		public static List<Dictionary<string, object>> FindMatches (PdfDocument pdf, string regex, int minPage=0, int numPages=0, int count=0)
+		public static List<Dictionary<string, object>> FindMatches (PdfDocument pdf, string regex, int minPage=0, int numPages=0, int count=0, bool ignoreCase=true)
 		{
 			FilteredEventListener listener = new FilteredEventListener();
 			TextLocationStrategy s = listener.AttachEventListener(new TextLocationStrategy());
@@ -512,7 +512,7 @@ namespace helicon
 				{
 					while (true)
 					{
-						Match m = Regex.Match(x.text, regex, RegexOptions.IgnoreCase);
+						Match m = Regex.Match(x.text, regex, ignoreCase ? RegexOptions.IgnoreCase : RegexOptions.None);
 						if (!m.Success) break;
 	
 						int i = x.text.IndexOf(m.Value);

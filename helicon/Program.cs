@@ -10,12 +10,13 @@ using System.Text.RegularExpressions;
 using System.Text;
 using System.IO;
 using System.Net.Mail;
+using System.Threading.Tasks;
 using IronRockUtils;
 using IronRockUtils.Json;
-
 using Microsoft.CSharp;
 using System.CodeDom.Compiler;
 using System.Reflection;
+using MimeKit.Text;
 using OpenPop.Mime;
 using OpenPop.Mime.Header;
 using OpenPop.Pop3;
@@ -54,7 +55,7 @@ namespace helicon
 		private static System.Threading.Mutex mutex = null;
 		private static FileInfo processFileInfo;
 
-		private static string VERSION_NAME = "2.1.24";
+		private static string VERSION_NAME = "2.2.8";
 
 		/* *********************************************************** */
 		private static int VERSION;
@@ -64,7 +65,8 @@ namespace helicon
 		private static SQLWrapper SQL = null;
 		private static Dictionary<string, object> CONTEXT = null;
 
-		private static ImapClient g_imap_client = null;
+		private static ImapX.ImapClient g_imap_client = null;
+		private static MailKit.Net.Imap.ImapClient g_imap_clientx = null;
 		private static Random random = new Random((int)(DateTime.Now.Ticks & 0x7FFFFFFF)); 
 
 		/* *********************************************************** */
@@ -98,10 +100,15 @@ namespace helicon
 			return System.Text.Encoding.UTF8.GetBytes(value.ToString());
 		}
 
-		private static string GetUtf8String (object value)
+		private static string GetUtf8String (object value, int count=0)
 		{
 			if (value.GetType().Name == "Byte[]")
-				return System.Text.Encoding.UTF8.GetString((byte[])value);
+			{
+				if (count != 0)
+					return System.Text.Encoding.UTF8.GetString((byte[])value, 0, count);
+				else
+					return System.Text.Encoding.UTF8.GetString((byte[])value);
+			}
 
 			return Convert.ToString(value);
 		}
@@ -771,6 +778,11 @@ namespace helicon
 				return Convert.ToString(Format (XmlUtils.GetStringAttribute (node, name, def)));
 		}
 
+		private static object FmtAttrObj (XmlElement node, string name, string def)
+		{
+			return Format("[[" + XmlUtils.GetStringAttribute(node, name, def) + "]]");
+		}
+
 		// *****************************************************
 		// Converters.
 
@@ -942,6 +954,12 @@ namespace helicon
 						res = d1 / d2;
 						break;
 
+					case "//": case "IDIV":
+						d1 = GetDouble(XEvalExpr());
+						d2 = GetDouble(XEvalExpr());
+						res = (int)(d1 / d2);
+						break;
+
 					case "!": case "NOT":
 						d1 = GetDouble(XEvalExpr());
 						res = d1 != 0 ? "0" : "1";
@@ -1049,6 +1067,29 @@ namespace helicon
 
 						break;
 
+					case "MID":
+						i1 = GetInt(XEvalExpr());
+						i2 = GetInt(XEvalExpr());
+
+						s1 = XEvalExpr().ToString();
+
+						if (s1.Length != 0)
+						{
+							if (i1 < 0) i1 += s1.Length;
+							if (i1 < 0) i1 = 0;
+							if (i1 >= s1.Length) i1 = s1.Length-1;
+
+							if (i2 < 0) i2 += s1.Length+1 - i1;
+							if (i2 < 0) i2 = 0;
+							if (i1+i2 >= s1.Length) i2 = s1.Length-i1;
+
+							res = s1.Substring(i1, i2);
+						}
+						else
+							res = "";
+
+						break;
+
 					case "?": case "IF":
 						b1 = GetBool(XEvalExpr());
 
@@ -1092,6 +1133,19 @@ namespace helicon
 
 						res = i1;
 						break;
+
+					case "RLIKE":
+						s2 = XEvalExpr().ToString();
+						s1 = XEvalExpr().ToString();
+
+						Regex regex = new Regex(s1, RegexOptions.ECMAScript | RegexOptions.IgnoreCase | RegexOptions.Multiline);
+
+						res = 0;
+
+						var matches = regex.Matches(s2);
+						if (matches.Count != 0) res = 1;
+
+						break;
 				}
 
 				while (offs < expr.Length && expr[offs] != ')')
@@ -1109,6 +1163,8 @@ namespace helicon
 
 		public static object NewEvalExpr (string expr)
 		{
+			expr = expr.Replace("\n", " ");
+			expr = expr.Replace("\r", " ");
 			Program.expr = expr;
 			Program.offs = 0;
 			object result = null;
@@ -1117,7 +1173,7 @@ namespace helicon
 				result = XEvalExpr();
 
 				if (Program.expr.Length != Program.offs)
-					throw new Exception("Possibly malformed condition.");
+					throw new Exception("Possibly malformed condition: " + Program.offs + " / " + Program.expr.Length);
 			}
 			catch (Exception e)
 			{
@@ -1245,8 +1301,11 @@ namespace helicon
 			FileInfo f = new FileInfo (filename);
 			if (!f.Exists)
 			{
-				LOG.write ("Error: Input file not found: `" + filename + "'");
-				return;
+				f = new FileInfo (filename + ".xml");
+				if (!f.Exists) {
+					LOG.write ("Error: Input file not found: `" + filename + "'");
+					return;
+				}
 			}
 
 			processFileInfo = f;
@@ -1335,7 +1394,7 @@ namespace helicon
 			// Execute each action.
 
 			try {
-				ExecuteActions (elem);
+				ExecuteActions(elem);
 			}
 			catch (FalseException e) {
 			}
@@ -1434,12 +1493,21 @@ namespace helicon
 					case "JsonLoad":
 					case "ApiCall":
 					case "Post":
+					case "Request":
 					case "Pop3LoadArray":
+
 					case "ImapLoadArray":
 					case "ImapOpen":
 					case "ImapClose":
 					case "ImapSetSeen":
 					case "ImapLoadMessage":
+
+					case "ImapLoadArrayX":
+					case "ImapOpenX":
+					case "ImapCloseX":
+					case "ImapSetSeenX":
+					case "ImapLoadMessageX":
+
 					case "LoadEmlMessage":
 					case "MsgLoadInfo":
 					case "PdfLoadInfo":
@@ -1474,9 +1542,9 @@ namespace helicon
 		}
 
 		// *****************************************************
-		static void ExecuteActions (XmlElement root)
+		static bool ExecuteActions (XmlElement root)
 		{
-			if (root == null) return;
+			if (root == null) return false;
 
 			foreach (XmlNode xmlnode in root.ChildNodes)
 			{
@@ -1537,6 +1605,7 @@ namespace helicon
 					case "JsonLoad":				JsonLoad(node); continue;
 					case "ApiCall":					ApiCall(node); continue;
 					case "Post":					Post(node); continue;
+					case "Request":					Request(node); continue;
 
 					case "Pop3LoadArray":			Pop3LoadArray(node); continue;
 					case "ImapLoadArray":			ImapLoadArray(node); continue;
@@ -1544,6 +1613,7 @@ namespace helicon
 					case "ImapClose":				ImapClose(node); continue;
 					case "ImapSetSeen":				ImapSetSeen(node); continue;
 					case "ImapLoadMessage":			ImapLoadMessage(node); continue;
+
 					case "LoadEmlMessage":			LoadEmlMessage(node); continue;
 					case "MsgLoadInfo":				MsgLoadInfo(node); continue;
 					case "PdfLoadInfo":				PdfLoadInfo(node); continue;
@@ -1569,6 +1639,8 @@ namespace helicon
 					case "ZipCompress":				ZipCompress(node); break;
 				}
 			}
+
+			return true;
 		}
 
 		private static bool NodeCheck (XmlElement node)
@@ -1612,10 +1684,17 @@ namespace helicon
 			if (!NodeCheck(node)) return;
 
 			try {
+				string val;
+
 				if (GetBool(FmtAttr(node, "Eval", "FALSE")) || GetBool(FmtAttr(node, "Expr", "FALSE")))
-					Console.WriteLine (EvalExpr(GetInnerText(node, "")));
+					val = (string)EvalExpr(GetInnerText(node, ""));
 				else
-					Console.WriteLine (FmtInnerText (node, ""));
+					val = FmtInnerText(node, "");
+
+				if (GetBool(FmtAttr(node, "NewLine", "TRUE")))
+					Console.WriteLine(val);
+				else
+					Console.Write(val);
 			}
 			catch (Exception e)
 			{
@@ -2435,7 +2514,8 @@ namespace helicon
 			List<Dictionary<string, object>> list;
 
 			try {
-				list = (List<Dictionary<string, object>>)CONTEXT[FmtAttr(node, "From", "Array")];
+				//list = (List<Dictionary<string, object>>)CONTEXT[FmtAttr(node, "From", "Array")];
+				list = (List<Dictionary<string, object>>)FmtAttrObj(node, "From", "Array");
 				if (list == null) throw new Exception ("Input array "+FmtAttr(node, "From", "Array")+" is null.");
 			}
 			catch (Exception e) {
@@ -2499,7 +2579,8 @@ namespace helicon
 			List<Dictionary<string, object>> list;
 
 			try {
-				list = (List<Dictionary<string, object>>)CONTEXT[FmtAttr(node, "In", "Array")];
+				//list = (List<Dictionary<string, object>>)CONTEXT[FmtAttr(node, "In", "Array")];
+				list = (List<Dictionary<string, object>>)FmtAttrObj(node, "In", "Array");
 				if (list == null) throw new Exception ("Input array "+FmtAttr(node, "In", "Array")+" is null.");
 			}
 			catch (Exception e) {
@@ -2553,12 +2634,15 @@ namespace helicon
 			List<Dictionary<string, object>> listB = null;
 
 			try {
-				listA = (List<object>)CONTEXT[FmtAttr(node, "In", "Array")];
+				//listA = (List<object>)CONTEXT[FmtAttr(node, "In", "Array")];
+				object  x = FmtAttrObj(node, "In", "Array");
+				listA = (List<object>)FmtAttrObj(node, "In", "Array");
 				if (listA == null) throw new Exception ("Input array "+FmtAttr(node, "In", "Array")+" is null.");
 			}
 			catch (InvalidCastException e)
 			{
-				listB = (List<Dictionary<string, object>>)CONTEXT[FmtAttr(node, "In", "Array")];
+				//listB = (List<Dictionary<string, object>>)CONTEXT[FmtAttr(node, "In", "Array")];
+				listB = (List<Dictionary<string, object>>)FmtAttrObj(node, "In", "Array");
 				if (listB == null) throw new Exception ("Input array "+FmtAttr(node, "In", "Array")+" is null.");
 			}
 			catch (Exception e) {
@@ -2640,7 +2724,8 @@ namespace helicon
 			Dictionary<string, object> list = null;
 
 			try {
-				list = (Dictionary<string, object>)CONTEXT[FmtAttr(node, "In", "Array")];
+				//list = (Dictionary<string, object>)CONTEXT[FmtAttr(node, "In", "Array")];
+				list = (Dictionary<string, object>)FmtAttrObj(node, "In", "Array");
 				if (list == null) throw new Exception ("Input array "+FmtAttr(node, "In", "Array")+" is null.");
 			}
 			catch (Exception e) {
@@ -2902,7 +2987,13 @@ namespace helicon
 			if (!prefix.EndsWith(".")) prefix += ".";
 
 			JsonElement elem = JsonElement.fromString(FmtInnerText(node, ""));
-			CONTEXT[prefix+"DATA"] = JsonToVars(elem, false);
+			object data = JsonToVars(elem, false);
+
+			string varName = FmtAttr(node, "VarName", "");
+			if (!String.IsNullOrEmpty(varName))
+				CONTEXT[varName] = data;
+			else
+				CONTEXT[prefix+"DATA"] = data;
 		}
 
 		// *****************************************************
@@ -3008,6 +3099,7 @@ namespace helicon
 
 			string tmp;
 			CONTEXT[prefix + "raw"] = tmp = Api.postData(url, contentType, data, auth, response == "JSON");
+			CONTEXT[prefix + "error"] = Api.errstr;
 			CONTEXT[prefix + "rawBytes"] = Encoding.GetEncoding(1252).GetBytes(tmp);
 
 			if (response == "JSON")
@@ -3022,6 +3114,66 @@ namespace helicon
 
 				CONTEXT[prefix + "DATA"] = JsonToVars(elem, debug);
 			}
+		}
+
+		// *****************************************************
+		private static void Request (XmlElement node)
+		{
+			if (!NodeCheck(node)) return;
+
+			string url = FmtAttr(node, "Url", "");
+			if (url == "") return;
+
+			string varName = FmtAttr(node, "VarName", "Res");
+			string method = FmtAttr(node, "Method", "GET").ToUpper();
+
+			string contentType = FmtAttr(node, "ContentType", "").ToLower();
+			byte[] data = null;
+
+			Api.clearRequest();
+
+			if (GetBool(FmtAttr(node, "ClearCookies", "true")))
+				Api.clearCookies();
+
+			if (contentType == "")
+			{
+				if (node.HasChildNodes)
+				{
+					foreach (XmlNode xmlnode in node.ChildNodes)
+					{
+						if (xmlnode.NodeType != XmlNodeType.Element)
+							continue;
+	
+						XmlElement field = (XmlElement)xmlnode;
+	
+						string fromFile = FmtAttr(field, "FromFile", "");
+						string filename = FmtAttr(field, "Filename", "");
+						string fieldName = FmtAttr(field, "Field", "");
+
+						if (fieldName == "")
+							fieldName = field.Name;
+
+						if (fromFile != "")
+							Api.addRequestFile (fieldName, filename != "" ? filename : new FileInfo(fromFile).Name, File.ReadAllBytes(fromFile));
+						else if (filename != "")
+							Api.addRequestFile (fieldName, filename, GetByteArray(FmtInnerTextObj(field, "")));
+						else
+							Api.addRequestField(fieldName, FmtInnerText(field, ""));
+					}
+				}
+			}
+			else
+				data = GetByteArray(FmtInnerTextObj(node, ""));
+
+			string auth = FmtAttr(node, "Auth", "").Trim();
+			if (auth == "") auth = null;
+
+			bool debug = GetBool(FmtAttr(node, "Debug", "false"));
+
+			string tmp;
+			CONTEXT[varName] = Api.runRequest(url, method, contentType, data, auth);
+			CONTEXT["ERRSTR"] = Api.errstr;
+			CONTEXT["HTTP_CODE"] = Api.responseCode;
 		}
 
 		private static object JsonToVars (JsonElement elem, bool debug=false, string pref="")
@@ -3203,10 +3355,13 @@ namespace helicon
 				List<Dictionary<string, object>> result = new List<Dictionary<string, object>> ();
 
 				string uidValidity = client.Folders.Inbox.UidValidity;
+				int _maxRecords = maxRecords;
 
 				for (int mindx = allMsgIds.Length-1; mindx >= 0; mindx--)
 		        {
-					if (maxRecords-- <= 0) break;
+					if (maxRecords != -1) {
+						if (_maxRecords-- <= 0) break;
+					}
 
 					long msgid = allMsgIds[mindx];
 
@@ -3266,7 +3421,40 @@ namespace helicon
 
 							string tmp = "";
 
-							if (m.Body.HasText)
+							string plain = m.Body.Text;
+							string html = m.Body.Html;
+
+							if (string.IsNullOrEmpty(plain)) plain = "";
+							if (string.IsNullOrEmpty(html)) html = "";
+
+							if (plain == "" && html != "")
+							{
+								HtmlAgilityPack.HtmlDocument doc = new HtmlAgilityPack.HtmlDocument();
+								doc.LoadHtml(html);
+
+								try {
+									foreach (var i in doc.DocumentNode.SelectNodes("//style"))
+										i.Remove();
+								}
+								catch (Exception e) {
+								}
+
+								try {
+									plain = doc.DocumentNode.InnerText;
+								}
+								catch (Exception e) {
+								}
+							}
+
+							try { plain = HtmlAgilityPack.HtmlEntity.DeEntitize(plain); } catch (Exception e) { }
+							try { html = HtmlAgilityPack.HtmlEntity.DeEntitize(html); } catch (Exception e) { }
+
+							o.Add("MSG_BODY", plain);
+							o.Add("MSG_BODY_LEN", plain.Length.ToString());
+							o.Add("MSG_BODY_HTML", html);
+							o.Add("MSG_BODY_HTML_LEN", html.Length.ToString());
+
+							/*if (m.Body.HasText)
 							{
 								tmp = m.Body.Text;
 							}
@@ -3295,10 +3483,7 @@ namespace helicon
 								tmp = HtmlAgilityPack.HtmlEntity.DeEntitize(tmp);
 							}
 							catch (Exception e) {
-							}
-
-							o.Add("MSG_BODY", tmp);
-							o.Add("MSG_BODY_LEN", tmp.Length.ToString());
+							}*/
 
 							if (markAsSeen)
 								m.Seen = true;
@@ -3337,6 +3522,7 @@ namespace helicon
 			bool use_ssl = GetBool(FmtAttr(node, "SSL", "FALSE"));
 			string username = FmtAttr(node, "Username", "");
 			string password = FmtAttr(node, "Password", "");
+			bool oauth = GetBool(FmtAttr(node, "OAuth2", "FALSE"));
 
 			bool credential_issue = String.IsNullOrEmpty(host) || port == 0 || String.IsNullOrEmpty(username) || String.IsNullOrEmpty(password);
 
@@ -3350,6 +3536,10 @@ namespace helicon
 				g_imap_client.Disconnect();
 
 			g_imap_client = new ImapClient ();
+			g_imap_client.IsDebug = true;
+
+			//var writer = new System.Diagnostics.TextWriterTraceListener(System.Console.Out);
+			//System.Diagnostics.Debug.Listeners.Add(writer);
 
 			try
 			{
@@ -3358,7 +3548,14 @@ namespace helicon
 				else
 					g_imap_client.Connect(host, port, false, false);
 
-				g_imap_client.Login(username, password);
+				bool res;
+				if (oauth) {
+					res = g_imap_client.Login(new OAuth2Creds(username, password));
+				}
+				else
+					res = g_imap_client.Login(username, password);
+
+				if (!res) throw new Exception ("Unable to Login");
 			}
 			catch (Exception e)
 			{
@@ -3366,7 +3563,7 @@ namespace helicon
 
 				if (!GetBool(FmtAttr(node, "Silent", "FALSE")))
 					throw new Exception ("ImapOpen: " + e.Message);
-
+				Console.WriteLine(e.StackTrace);
 				LOG.write ("Error: ImapOpen: " + e.Message);
 			}
 		}
@@ -3592,7 +3789,7 @@ namespace helicon
 		}
 
 		// *****************************************************
-		private static void _GetAttachments (MimeKit.MimeMessage msg, List<Dictionary<string, object>> att, ref string str_attachments, ref string str_body)
+		private static void _GetAttachments (MimeKit.MimeMessage msg, List<Dictionary<string, object>> att, ref string str_attachments, ref string str_body, ref string html_body)
 		{
 			foreach (MimeKit.MimeEntity entity in msg.Attachments)
 			{
@@ -3600,7 +3797,7 @@ namespace helicon
 
 				try {
 					MimeKit.MessagePart submsg = (MimeKit.MessagePart)entity;
-					_GetAttachments(submsg.Message, att, ref str_attachments, ref str_body);
+					_GetAttachments(submsg.Message, att, ref str_attachments, ref str_body, ref html_body);
 					continue;
 				}
 				catch (Exception e) {
@@ -3611,16 +3808,13 @@ namespace helicon
 				}
 				catch (Exception e) {
 					throw e;
-					//continue;
 				}
 
 				Dictionary<string, object> tmp2 = new Dictionary<string, object> ();
 				byte[] buff;
 
-				using (Stream s = part.Content.Open())
-				{
-					using(MemoryStream ms2 = new MemoryStream())
-					{
+				using (Stream s = part.Content.Open()) {
+					using(MemoryStream ms2 = new MemoryStream()) {
 						s.CopyTo(ms2);
 						buff = ms2.ToArray();
 					}
@@ -3635,15 +3829,17 @@ namespace helicon
 				att.Add(tmp2);
 			}
 
-			string tmp = "";
+			string tmp = null;
+			string tmp3 = null;
+			string tmp4 = null;
 
-			if (msg.TextBody != null)
-			{
+			if (msg.TextBody != null) {
 				tmp = msg.TextBody;
 			}
-			else if (msg.HtmlBody != null)
+
+			if (msg.HtmlBody != null)
 			{
-				HtmlAgilityPack.HtmlDocument doc = new HtmlAgilityPack.HtmlDocument ();
+				HtmlAgilityPack.HtmlDocument doc = new HtmlAgilityPack.HtmlDocument();
 				doc.LoadHtml(msg.HtmlBody);
 
 				try {
@@ -3654,20 +3850,44 @@ namespace helicon
 				}
 
 				try {
-					tmp = doc.DocumentNode.InnerText;
+					tmp3 = doc.DocumentNode.InnerText;
+					tmp4 = doc.DocumentNode.InnerHtml;
 				}
 				catch (Exception e) {
-					tmp = msg.TextBody ?? "";
+					tmp3 = null;
+					tmp4 = null;
 				}
 			}
 
 			try {
-				tmp = HtmlAgilityPack.HtmlEntity.DeEntitize(tmp);
+				if (tmp != null)
+					tmp = HtmlAgilityPack.HtmlEntity.DeEntitize(tmp);
 			}
-			catch (Exception e) {
-			}
+			catch (Exception e) { }
 
-			str_body += tmp + "\n--------------\n";
+			try {
+				if (tmp3 != null)
+					tmp3 = HtmlAgilityPack.HtmlEntity.DeEntitize(tmp3);
+			}
+			catch (Exception e) { }
+
+			try {
+				if (tmp4 != null)
+					tmp4 = HtmlAgilityPack.HtmlEntity.DeEntitize(tmp4);
+			}
+			catch (Exception e) { }
+
+			if (tmp3 == null)
+				tmp3 = "";
+
+			if (tmp4 == null)
+				tmp4 = "";
+
+			if (tmp == null)
+				tmp = tmp3;
+
+			str_body += tmp + "\n~~~\n";
+			html_body += tmp4  + "\n~~~\n";
 		}
 
 		private static void LoadEmlMessage (XmlElement node)
@@ -3695,11 +3915,20 @@ namespace helicon
 				string to_addr = "";
 				string str_attachments = "";
 				string str_body = "";
+				string html_body = "";
 
-				_GetAttachments (m, att, ref str_attachments, ref str_body);
+				_GetAttachments (m, att, ref str_attachments, ref str_body, ref html_body);
 
 				for (int j = 0; j < m.To.Count; j++)
-					to_addr += ";" + ((MailboxAddress)m.To[j]).Address;
+				{
+					if (m.To[j] is GroupAddress) {
+						foreach (var k in ((GroupAddress)m.To[j]).Members)
+							to_addr += ";" + ((MailboxAddress)k).Address;
+					}
+					else {
+						to_addr += ";" + ((MailboxAddress)m.To[j]).Address;
+					}
+				}
 
 				to_addr = to_addr.Length != 0 ? to_addr.Substring(1) : "";
 
@@ -3711,6 +3940,10 @@ namespace helicon
 
 				o.Add("MSG_BODY", str_body);
 				o.Add("MSG_BODY_LEN", str_body.Length.ToString());
+
+				o.Add("MSG_BODY_HTML", html_body);
+				o.Add("MSG_BODY_HTML_LEN", html_body.Length.ToString());
+				
 
 				foreach (string name in o.Keys)
 					CONTEXT[name] = o[name];
@@ -4170,7 +4403,9 @@ namespace helicon
 					FmtInnerText(node, "").Trim(),
 					GetInt(FmtAttr(node, "StartPage", "0")),
 					GetInt(FmtAttr(node, "MaxPages", "0")),
-					GetInt(FmtAttr(node, "MaxCount", "0")));
+					GetInt(FmtAttr(node, "MaxCount", "0")),
+					GetBool(FmtAttr(node, "IgnoreCase", "True"))
+					);
 			}
 			catch (Exception e) {
 				throw new Exception ("PdfFind: " + e.Message);
@@ -4375,7 +4610,8 @@ namespace helicon
 			List<Dictionary<string, object>> list;
 
 			try {
-				list = (List<Dictionary<string, object>>)CONTEXT[FmtAttr(node, "From", "Array")];
+				//list = (List<Dictionary<string, object>>)CONTEXT[FmtAttr(node, "From", "Array")];
+				list = (List<Dictionary<string, object>>)FmtAttrObj(node, "From", "Array");
 				if (list == null) throw new Exception ("Input array "+FmtAttr(node, "From", "Array")+" is null.");
 			}
 			catch (Exception e) {
