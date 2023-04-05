@@ -5,6 +5,7 @@ using System.Web;
 using System.Xml;
 using IronRockUtils.Json;
 using System.Collections.Specialized;
+using System.Collections.Generic;
 
 namespace helicon
 {
@@ -28,6 +29,11 @@ namespace helicon
 		/// Cookie fields obtained from last request.
 		/// </summary>
 		public static NameValueCollection cookies = new NameValueCollection();
+		
+		/// <summary>
+		/// Output headers.
+		/// </summary>
+		public static Dictionary<string, object> outHeaders = new Dictionary<string, object>();
 
 		/// <summary>
 		/// XML response obtained from the server.
@@ -341,7 +347,7 @@ namespace helicon
 		/// <summary>
 		/// Executes an HTTP request.
 		/// </summary>
-		public static string runRequest (string url, string method, string contentType, byte[] data, string auth)
+		public static string runRequest (string url, string method, string contentType, byte[] data, string auth, string[] headers)
 		{
 			string result = "";
 			errstr = "";
@@ -350,7 +356,8 @@ namespace helicon
 			multipartQuery += "--" + multipartBoundary + "--\r\n\r\n";
 			responseCode = 200;
 
-			try {
+			try
+			{
 				WebClient netClient = new WebClient();
 
 				netClient.Headers.Add(HttpRequestHeader.UserAgent, "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:103.0) Gecko/20100101 Firefox/103.0");
@@ -371,6 +378,14 @@ namespace helicon
 						netClient.Headers["Authorization"] = auth.Substring(4);
 					else
 						netClient.Headers["Authorization"] = "Basic " + System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(auth));
+				}
+
+				foreach (string tmp in headers)
+				{
+					int i = tmp.IndexOf(':');
+					if (i == -1 || i == 0 || i == tmp.Length-1) continue;
+
+					netClient.Headers[tmp.Substring(0,i).Trim()] = tmp.Substring(i+1).Trim();
 				}
 
 				if (method == "GET")
@@ -401,18 +416,25 @@ namespace helicon
 				}
 
 				WebHeaderCollection h = netClient.ResponseHeaders;
+				outHeaders.Clear();
 
 				for (int i = 0; i < h.Count; i++)
 				{
-					string hdr = h.GetKey(i);
-					if (hdr.ToLower() != "set-cookie") continue;
+					string hdr = h.GetKey(i).ToLower();
 
+					//Console.WriteLine("HDR " + hdr + " => " + value);
 					foreach (string value in h.GetValues(hdr))
-					{
-						string[] t0 = value.Split(';');
-						string[] t1 = t0[0].Split('=');
+						outHeaders[hdr] = value;
 
-						cookies.Set(t1[0].Trim(), t1[1].Trim());
+					if (hdr == "set-cookie")
+					{
+						foreach (string value in h.GetValues(hdr))
+						{
+							string[] t0 = value.Split(';');
+							string[] t1 = t0[0].Split('=');
+
+							cookies.Set(t1[0].Trim(), t1[1].Trim());
+						}
 					}
 				}
 			}

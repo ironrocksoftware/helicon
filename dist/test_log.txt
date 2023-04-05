@@ -1,0 +1,42 @@
+2023-4-5_15142: Error: ForRange: ForEachIndex: ForEachIndex: Object reference not set to an instance of an object.
+2023-4-5_15142: Stack Trace:    at helicon.Program.ForEachIndex(XmlElement node) in c:\Users\Master\Desktop\work\helicon\helicon\helicon\Program.cs:line 2679
+   at helicon.Program.ExecuteActions(XmlElement root) in c:\Users\Master\Desktop\work\helicon\helicon\helicon\Program.cs:line 1597
+   at helicon.Program.Block(XmlElement node) in c:\Users\Master\Desktop\work\helicon\helicon\helicon\Program.cs:line 2917
+   at helicon.Program.ExecuteActions(XmlElement root) in c:\Users\Master\Desktop\work\helicon\helicon\helicon\Program.cs:line 1603
+   at helicon.Program.ForRange(XmlElement node) in c:\Users\Master\Desktop\work\helicon\helicon\helicon\Program.cs:line 2783
+2023-4-5_15143: Error: ForRange: ForEachIndex: ForEachIndex: Object reference not set to an instance of an object.
+2023-4-5_15143: Stack Trace:    at helicon.Program.ForEachIndex(XmlElement node) in c:\Users\Master\Desktop\work\helicon\helicon\helicon\Program.cs:line 2679
+   at helicon.Program.ExecuteActions(XmlElement root) in c:\Users\Master\Desktop\work\helicon\helicon\helicon\Program.cs:line 1597
+   at helicon.Program.Block(XmlElement node) in c:\Users\Master\Desktop\work\helicon\helicon\helicon\Program.cs:line 2917
+   at helicon.Program.ExecuteActions(XmlElement root) in c:\Users\Master\Desktop\work\helicon\helicon\helicon\Program.cs:line 1603
+   at helicon.Program.ForRange(XmlElement node) in c:\Users\Master\Desktop\work\helicon\helicon\helicon\Program.cs:line 2783
+2023-4-5_15145: Error: ForRange: ForEachIndex: ForEachIndex: Object reference not set to an instance of an object.
+2023-4-5_15145: Stack Trace:    at helicon.Program.ForEachIndex(XmlElement node) in c:\Users\Master\Desktop\work\helicon\helicon\helicon\Program.cs:line 2679
+   at helicon.Program.ExecuteActions(XmlElement root) in c:\Users\Master\Desktop\work\helicon\helicon\helicon\Program.cs:line 1597
+   at helicon.Program.Block(XmlElement node) in c:\Users\Master\Desktop\work\helicon\helicon\helicon\Program.cs:line 2917
+   at helicon.Program.ExecuteActions(XmlElement root) in c:\Users\Master\Desktop\work\helicon\helicon\helicon\Program.cs:line 1603
+   at helicon.Program.ForRange(XmlElement node) in c:\Users\Master\Desktop\work\helicon\helicon\helicon\Program.cs:line 2783
+2023-4-5_5547: Error: Azure analyze: error: 200
+2023-4-5_5547: Stack Trace:    at helicon.Program.RaiseException(XmlElement node) in c:\Users\Master\Desktop\work\helicon\helicon\helicon\Program.cs:line 1755
+   at helicon.Program.ExecuteActions(XmlElement root) in c:\Users\Master\Desktop\work\helicon\helicon\helicon\Program.cs:line 1568
+   at helicon.Program.Block(XmlElement node) in c:\Users\Master\Desktop\work\helicon\helicon\helicon\Program.cs:line 2917
+   at helicon.Program.ExecuteActions(XmlElement root) in c:\Users\Master\Desktop\work\helicon\helicon\helicon\Program.cs:line 1603
+   at helicon.Program.ExecuteProcess(String filename, String[] args, Boolean reEntry) in c:\Users\Master\Desktop\work\helicon\helicon\helicon\Program.cs:line 1399
+2023-4-5_61043: Error: While opening process description file: `test.xml'
+2023-4-5_61043: Message: '/' is an unexpected token. The expected token is '"' or '''. Line 105, position 20.
+2023-4-5_61617: StackTrace:    at iText.Kernel.Pdf.PdfPagesTree.GenerateTree()
+   at iText.Kernel.Pdf.PdfDocument.Close()
+   at helicon.PdfUtils.SlicePDF(String outputFile, String inputFile, Int32[] pageStart, Int32[] pageEnd) in c:\Users\Master\Desktop\work\helicon\helicon\helicon\PdfUtils.cs:line 326
+   at helicon.Program.PdfSlice(XmlElement node) in c:\Users\Master\Desktop\work\helicon\helicon\helicon\Program.cs:line 4313
+2023-4-5_61617: Error: ForRange: PdfSlice(output.pdf): Document has no pages.
+2023-4-5_61617: Stack Trace:    at helicon.Program.PdfSlice(XmlElement node) in c:\Users\Master\Desktop\work\helicon\helicon\helicon\Program.cs:line 4318
+   at helicon.Program.ExecuteActions(XmlElement root) in c:\Users\Master\Desktop\work\helicon\helicon\helicon\Program.cs:line 1624
+   at helicon.Program.ForRange(XmlElement node) in c:\Users\Master\Desktop\work\helicon\helicon\helicon\Program.cs:line 2783
+2023-4-5_61618: StackTrace:    at iText.Kernel.Pdf.PdfPagesTree.GenerateTree()
+   at iText.Kernel.Pdf.PdfDocument.Close()
+   at helicon.PdfUtils.SlicePDF(String outputFile, String inputFile, Int32[] pageStart, Int32[] pageEnd) in c:\Users\Master\Desktop\work\helicon\helicon\helicon\PdfUtils.cs:line 326
+   at helicon.Program.PdfSlice(XmlElement node) in c:\Users\Master\Desktop\work\helicon\helicon\helicon\Program.cs:line 4313
+2023-4-5_61618: Error: ForRange: PdfSlice(output.pdf): Document has no pages.
+2023-4-5_61618: Stack Trace:    at helicon.Program.PdfSlice(XmlElement node) in c:\Users\Master\Desktop\work\helicon\helicon\helicon\Program.cs:line 4318
+   at helicon.Program.ExecuteActions(XmlElement root) in c:\Users\Master\Desktop\work\helicon\helicon\helicon\Program.cs:line 1624
+   at helicon.Program.ForRange(XmlElement node) in c:\Users\Master\Desktop\work\helicon\helicon\helicon\Program.cs:line 2783

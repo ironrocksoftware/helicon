@@ -55,7 +55,7 @@ namespace helicon
 		private static System.Threading.Mutex mutex = null;
 		private static FileInfo processFileInfo;
 
-		private static string VERSION_NAME = "2.2.8";
+		private static string VERSION_NAME = "2.2.9";
 
 		/* *********************************************************** */
 		private static int VERSION;
@@ -1368,6 +1368,8 @@ namespace helicon
 				CONTEXT["@MAGENTA"] = "\x1B[95m";
 				CONTEXT["@CYAN"] = "\x1B[96m";
 				CONTEXT["@WHITE"] = "\x1B[97m";
+
+				CONTEXT["ResponseHeaders"] = Api.outHeaders;
 
 				if (args != null)
 				{
@@ -3126,6 +3128,7 @@ namespace helicon
 
 			string varName = FmtAttr(node, "VarName", "Res");
 			string method = FmtAttr(node, "Method", "GET").ToUpper();
+			string[] headers = FmtAttr(node, "Header", "").Split(';');
 
 			string contentType = FmtAttr(node, "ContentType", "").ToLower();
 			byte[] data = null;
@@ -3171,7 +3174,7 @@ namespace helicon
 			bool debug = GetBool(FmtAttr(node, "Debug", "false"));
 
 			string tmp;
-			CONTEXT[varName] = Api.runRequest(url, method, contentType, data, auth);
+			CONTEXT[varName] = Api.runRequest(url, method, contentType, data, auth, headers);
 			CONTEXT["ERRSTR"] = Api.errstr;
 			CONTEXT["HTTP_CODE"] = Api.responseCode;
 		}
@@ -3350,13 +3353,19 @@ namespace helicon
 
 					client.Login(username, password);
 				}
-
+Console.WriteLine("3353");
+if (client == null) Console.WriteLine("NO CLIENT");
+if (client.Folders == null) Console.WriteLine("NO FOLDERS");
+if (client.Folders.Inbox == null) Console.WriteLine("NO INBOX");
+Console.WriteLine("QUERY="+query);
+Console.WriteLine("MAX_RECORDS="+maxRecords);
 				long[] allMsgIds = client.Folders.Inbox.SearchMessageIds(query, maxRecords);
+Console.WriteLine("3355");
 				List<Dictionary<string, object>> result = new List<Dictionary<string, object>> ();
-
+Console.WriteLine("3356");
 				string uidValidity = client.Folders.Inbox.UidValidity;
 				int _maxRecords = maxRecords;
-
+Console.WriteLine("3359");
 				for (int mindx = allMsgIds.Length-1; mindx >= 0; mindx--)
 		        {
 					if (maxRecords != -1) {
