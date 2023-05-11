@@ -55,7 +55,7 @@ namespace helicon
 		private static System.Threading.Mutex mutex = null;
 		private static FileInfo processFileInfo;
 
-		private static string VERSION_NAME = "2.2.9";
+		private static string VERSION_NAME = "2.2.10";
 
 		/* *********************************************************** */
 		private static int VERSION;
@@ -3922,8 +3922,12 @@ Console.WriteLine("3359");
 				o.Add("MSG_ATTACHMENTS", att);
 
 				string to_addr = "";
+				string cc_addr = "";
+				string bcc_addr = "";
+
 				string str_attachments = "";
 				string str_body = "";
+
 				string html_body = "";
 
 				_GetAttachments (m, att, ref str_attachments, ref str_body, ref html_body);
@@ -3939,11 +3943,37 @@ Console.WriteLine("3359");
 					}
 				}
 
+				for (int j = 0; j < m.Cc.Count; j++)
+				{
+					if (m.Cc[j] is GroupAddress) {
+						foreach (var k in ((GroupAddress)m.Cc[j]).Members)
+							cc_addr += ";" + ((MailboxAddress)k).Address;
+					}
+					else {
+						cc_addr += ";" + ((MailboxAddress)m.Cc[j]).Address;
+					}
+				}
+
+				for (int j = 0; j < m.Bcc.Count; j++)
+				{
+					if (m.Bcc[j] is GroupAddress) {
+						foreach (var k in ((GroupAddress)m.Bcc[j]).Members)
+							bcc_addr += ";" + ((MailboxAddress)k).Address;
+					}
+					else {
+						bcc_addr += ";" + ((MailboxAddress)m.Bcc[j]).Address;
+					}
+				}
+
 				to_addr = to_addr.Length != 0 ? to_addr.Substring(1) : "";
+				cc_addr = cc_addr.Length != 0 ? cc_addr.Substring(1) : "";
+				bcc_addr = bcc_addr.Length != 0 ? bcc_addr.Substring(1) : "";
 
 				o.Add("MSG_FROM_NAME", ((MailboxAddress)m.From[0]).Name);
 				o.Add("MSG_FROM_EMAIL", ((MailboxAddress)m.From[0]).Address);
 				o.Add("MSG_TO_EMAILS", to_addr);
+				o.Add("MSG_CC_EMAILS", cc_addr);
+				o.Add("MSG_BCC_EMAILS", bcc_addr);
 				o.Add("MSG_SUBJECT", m.Subject);
 				o.Add("MSG_ATTACHMENT_NAMES", str_attachments);
 
