@@ -121,7 +121,7 @@ namespace helicon
 			string result = "";
 			errstr = "";
 
-			System.Net.ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | SecurityProtocolType.Tls13;
+			//System.Net.ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | SecurityProtocolType.Tls13;
 			multipartQuery += "--" + multipartBoundary + "--\r\n\r\n";
 
 			try {
@@ -193,7 +193,7 @@ namespace helicon
 			string result = "";
 			errstr = "";
 
-			System.Net.ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | SecurityProtocolType.Tls13;
+			//System.Net.ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | SecurityProtocolType.Tls13;
 			multipartQuery += "--" + multipartBoundary + "--\r\n\r\n";
 
 			try {
@@ -281,7 +281,7 @@ namespace helicon
 			string result = "";
 			errstr = "";
 
-			System.Net.ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | SecurityProtocolType.Tls13;
+			//System.Net.ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | SecurityProtocolType.Tls13;
 
 			try {
 				WebClient netClient = new WebClient();
@@ -352,7 +352,7 @@ namespace helicon
 			string result = "";
 			errstr = "";
 
-			System.Net.ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | SecurityProtocolType.Tls13;
+			//System.Net.ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | SecurityProtocolType.Tls13;
 			multipartQuery += "--" + multipartBoundary + "--\r\n\r\n";
 			responseCode = 200;
 

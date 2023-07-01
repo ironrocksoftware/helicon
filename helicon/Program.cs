@@ -55,7 +55,7 @@ namespace helicon
 		private static System.Threading.Mutex mutex = null;
 		private static FileInfo processFileInfo;
 
-		private static string VERSION_NAME = "2.2.10";
+		private static string VERSION_NAME = "2.2.12";
 
 		/* *********************************************************** */
 		private static int VERSION;
@@ -1236,8 +1236,6 @@ namespace helicon
 		{
 			EnableAnsiConsole();
 
-			System.Net.ServicePointManager.SecurityProtocol = System.Net.SecurityProtocolType.Tls12 | System.Net.SecurityProtocolType.Tls13;
-
 			if (args.Length == 1 && args[0] == "-v")
 			{
 				Console.WriteLine("\nhelicon: version " + VERSION_NAME);
@@ -1263,6 +1261,30 @@ namespace helicon
 
 				return;
 			}
+
+			bool tls13 = true;
+
+			while (args.Length > 0)
+			{
+				bool found = false;
+
+				if (args[0] == "-deftls")
+				{
+					tls13 = false;
+					found = true;
+				}
+
+				if (found) {
+					var newArgs = new string[args.Length - 1];
+					Array.Copy(args, 1, newArgs, 0, newArgs.Length);
+					args = newArgs;
+				}
+
+				break;
+			}
+
+			if (tls13)
+				System.Net.ServicePointManager.SecurityProtocol = System.Net.SecurityProtocolType.Tls12 | System.Net.SecurityProtocolType.Tls13;
 
 			if (args.Length > 0)
 			{
