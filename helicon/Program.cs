@@ -55,7 +55,7 @@ namespace helicon
 		private static System.Threading.Mutex mutex = null;
 		private static FileInfo processFileInfo;
 
-		private static string VERSION_NAME = "2.2.12";
+		private static string VERSION_NAME = "2.2.14";
 
 		/* *********************************************************** */
 		private static int VERSION;
@@ -299,6 +299,10 @@ namespace helicon
 
 				case "FROMBASE64":
 					result = System.Text.Encoding.UTF8.GetString(System.Convert.FromBase64String(Convert.ToString(ContextGet(val[1]))));
+					break;
+
+				case "BYTESFROMBASE64":
+					result = System.Convert.FromBase64String(Convert.ToString(ContextGet(val[1])));
 					break;
 
 				case "ESCAPE":
@@ -1263,28 +1267,37 @@ namespace helicon
 			}
 
 			bool tls13 = true;
+			bool trustSsl = false;
+			int k = 0;
 
-			while (args.Length > 0)
+			while (k < args.Length)
 			{
-				bool found = false;
-
-				if (args[0] == "-deftls")
-				{
+				if (args[k] == "-deftls") {
 					tls13 = false;
-					found = true;
+					k++;
+					continue;
 				}
 
-				if (found) {
-					var newArgs = new string[args.Length - 1];
-					Array.Copy(args, 1, newArgs, 0, newArgs.Length);
-					args = newArgs;
+				if (args[k] == "-trust") {
+					trustSsl = true;
+					k++;
+					continue;
 				}
 
 				break;
 			}
 
+			if (k != 0) {
+				var newArgs = new string[args.Length - k];
+				Array.Copy(args, k, newArgs, 0, newArgs.Length);
+				args = newArgs;
+			}
+
 			if (tls13)
 				System.Net.ServicePointManager.SecurityProtocol = System.Net.SecurityProtocolType.Tls12 | System.Net.SecurityProtocolType.Tls13;
+
+			if (trustSsl)
+				System.Net.ServicePointManager.ServerCertificateValidationCallback = (a, b, c, d) => true;
 
 			if (args.Length > 0)
 			{
